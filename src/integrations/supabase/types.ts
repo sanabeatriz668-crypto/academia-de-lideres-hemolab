@@ -14,7 +14,268 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      evaluations: {
+        Row: {
+          comunicacao: number
+          created_at: string
+          empatia: number
+          evaluated_id: string
+          evaluator_id: string
+          id: string
+          lideranca: number
+          organizacao: number
+          proatividade: number
+          resolucao_problemas: number
+        }
+        Insert: {
+          comunicacao: number
+          created_at?: string
+          empatia: number
+          evaluated_id: string
+          evaluator_id: string
+          id?: string
+          lideranca: number
+          organizacao: number
+          proatividade: number
+          resolucao_problemas: number
+        }
+        Update: {
+          comunicacao?: number
+          created_at?: string
+          empatia?: number
+          evaluated_id?: string
+          evaluator_id?: string
+          id?: string
+          lideranca?: number
+          organizacao?: number
+          proatividade?: number
+          resolucao_problemas?: number
+        }
+        Relationships: []
+      }
+      evolution_checkins: {
+        Row: {
+          action_plan: string | null
+          created_at: string
+          id: string
+          improvements: string | null
+          meeting_date: string
+          strengths: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_plan?: string | null
+          created_at?: string
+          id?: string
+          improvements?: string | null
+          meeting_date?: string
+          strengths?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_plan?: string | null
+          created_at?: string
+          id?: string
+          improvements?: string | null
+          meeting_date?: string
+          strengths?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      feedbacks: {
+        Row: {
+          area: string
+          author_id: string
+          created_at: string
+          id: string
+          message: string
+          target_id: string
+        }
+        Insert: {
+          area: string
+          author_id: string
+          created_at?: string
+          id?: string
+          message: string
+          target_id: string
+        }
+        Update: {
+          area?: string
+          author_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          target_id?: string
+        }
+        Relationships: []
+      }
+      module_progress: {
+        Row: {
+          id: string
+          module_id: string
+          progress: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          module_id: string
+          progress?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          module_id?: string
+          progress?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_progress_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          activities: number
+          created_at: string
+          description: string | null
+          id: string
+          lessons: number
+          month: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          activities?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          lessons?: number
+          month: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          activities?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          lessons?: number
+          month?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string
+          id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_completions: {
+        Row: {
+          completed_at: string | null
+          done: boolean
+          id: string
+          reflection: string | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          done?: boolean
+          id?: string
+          reflection?: string | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          done?: boolean
+          id?: string
+          reflection?: string | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          points: number
+          title: string
+          week: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          points?: number
+          title: string
+          week: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          points?: number
+          title?: string
+          week?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
