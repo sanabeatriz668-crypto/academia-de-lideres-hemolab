@@ -15,6 +15,8 @@ import Evolucao from "./pages/Evolucao";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import Admin from "./pages/Admin";
+import Notificacoes from "./pages/Notificacoes";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
