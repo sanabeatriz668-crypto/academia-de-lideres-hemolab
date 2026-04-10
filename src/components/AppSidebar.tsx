@@ -8,9 +8,12 @@ import {
   Bell,
   Settings,
   Beaker,
+  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -43,8 +46,17 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { user, signOut } = useAuth();
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
+  const displayName = user?.user_metadata?.full_name || user?.email || "Usuário";
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <Sidebar collapsible="icon">
@@ -117,16 +129,27 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         {!collapsed && (
-          <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/50 p-3">
-            <div className="h-8 w-8 rounded-full gradient-accent flex items-center justify-center text-xs font-bold text-accent-foreground flex-shrink-0">
-              ML
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/50 p-3">
+              <div className="h-8 w-8 rounded-full gradient-accent flex items-center justify-center text-xs font-bold text-accent-foreground flex-shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
+                  {displayName}
+                </p>
+                <p className="text-[10px] text-sidebar-foreground/50 truncate">{user?.email}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
-                Maria Lima
-              </p>
-              <p className="text-[10px] text-sidebar-foreground/50">Líder</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-xs text-muted-foreground"
+              onClick={signOut}
+            >
+              <LogOut className="h-3 w-3 mr-2" />
+              Sair
+            </Button>
           </div>
         )}
       </SidebarFooter>
