@@ -10,6 +10,7 @@ import {
   Beaker,
   LogOut,
   TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -40,6 +41,7 @@ const mainItems = [
 ];
 
 const secondaryItems = [
+  { title: "Administração", url: "/admin", icon: ShieldCheck },
   { title: "Notificações", url: "/notificacoes", icon: Bell },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
