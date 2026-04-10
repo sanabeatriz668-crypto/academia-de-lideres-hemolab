@@ -9,6 +9,7 @@ import {
   Settings,
   Beaker,
   LogOut,
+  TrendingUp,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -35,6 +36,7 @@ const mainItems = [
   { title: "Avaliação 360°", url: "/avaliacao", icon: MessageSquare },
   { title: "Ranking", url: "/ranking", icon: Trophy },
   { title: "Biblioteca", url: "/biblioteca", icon: BookOpen },
+  { title: "Evolução", url: "/evolucao", icon: TrendingUp },
 ];
 
 const secondaryItems = [
