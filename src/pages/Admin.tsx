@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Plus, Trash2, Users, BookOpen, CheckSquare } from "lucide-react";
+import { UserPlus, Plus, Users, BookOpen, CheckSquare, GraduationCap, Star } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -59,7 +59,7 @@ export default function Admin() {
     }
   };
 
-  // ---- Modules ----
+  // ---- Modules / Trilha ----
   const [modTitle, setModTitle] = useState("");
   const [modDescription, setModDescription] = useState("");
   const [modMonth, setModMonth] = useState("");
@@ -89,12 +89,8 @@ export default function Admin() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Módulo criado!");
-      setModTitle("");
-      setModDescription("");
-      setModMonth("");
-      setModLessons("0");
-      setModActivities("0");
+      toast.success("Módulo da trilha criado!");
+      setModTitle(""); setModDescription(""); setModMonth(""); setModLessons("0"); setModActivities("0");
       queryClient.invalidateQueries({ queryKey: ["modules"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -130,85 +126,115 @@ export default function Admin() {
     },
     onSuccess: () => {
       toast.success("Tarefa criada!");
-      setTaskTitle("");
-      setTaskDescription("");
-      setTaskWeek("");
-      setTaskPoints("10");
-      setTaskDueDate("");
+      setTaskTitle(""); setTaskDescription(""); setTaskWeek(""); setTaskPoints("10"); setTaskDueDate("");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ---- Trainings ----
+  const [trTitle, setTrTitle] = useState("");
+  const [trDescription, setTrDescription] = useState("");
+  const [trCategory, setTrCategory] = useState("");
+  const [trLink, setTrLink] = useState("");
+  const [trDuration, setTrDuration] = useState("0");
+
+  const { data: trainings = [] } = useQuery({
+    queryKey: ["trainings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trainings").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const createTraining = useMutation({
+    mutationFn: async () => {
+      if (!trTitle.trim()) throw new Error("Título é obrigatório");
+      const { error } = await supabase.from("trainings").insert({
+        title: trTitle.trim(),
+        description: trDescription.trim() || null,
+        category: trCategory.trim() || null,
+        link: trLink.trim() || null,
+        duration_minutes: parseInt(trDuration) || 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Treinamento criado!");
+      setTrTitle(""); setTrDescription(""); setTrCategory(""); setTrLink(""); setTrDuration("0");
+      queryClient.invalidateQueries({ queryKey: ["trainings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // ---- Evaluation criteria ----
+  const [critName, setCritName] = useState("");
+  const [critDescription, setCritDescription] = useState("");
+
+  const { data: criteria = [] } = useQuery({
+    queryKey: ["evaluation_criteria"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("evaluation_criteria").select("*").order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const createCriterion = useMutation({
+    mutationFn: async () => {
+      if (!critName.trim()) throw new Error("Nome do critério é obrigatório");
+      const { error } = await supabase.from("evaluation_criteria").insert({
+        name: critName.trim(),
+        description: critDescription.trim() || null,
+        sort_order: criteria.length,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Critério adicionado!");
+      setCritName(""); setCritDescription("");
+      queryClient.invalidateQueries({ queryKey: ["evaluation_criteria"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
-    <AppLayout title="Administração" subtitle="Cadastrar líderes e atividades">
-      <div className="max-w-4xl mx-auto">
+    <AppLayout title="Administração" subtitle="Gerenciar líderes, trilha, tarefas, treinamentos e avaliações">
+      <div className="max-w-5xl mx-auto">
         <Tabs defaultValue="leaders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="leaders" className="text-xs gap-1.5">
-              <Users className="h-3.5 w-3.5" /> Líderes
-            </TabsTrigger>
-            <TabsTrigger value="modules" className="text-xs gap-1.5">
-              <BookOpen className="h-3.5 w-3.5" /> Módulos
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="text-xs gap-1.5">
-              <CheckSquare className="h-3.5 w-3.5" /> Tarefas
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-1 h-auto">
+            <TabsTrigger value="leaders" className="text-xs gap-1.5"><Users className="h-3.5 w-3.5" /> Líderes</TabsTrigger>
+            <TabsTrigger value="modules" className="text-xs gap-1.5"><BookOpen className="h-3.5 w-3.5" /> Trilha</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs gap-1.5"><CheckSquare className="h-3.5 w-3.5" /> Tarefas</TabsTrigger>
+            <TabsTrigger value="trainings" className="text-xs gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> Treinamentos</TabsTrigger>
+            <TabsTrigger value="evaluation" className="text-xs gap-1.5"><Star className="h-3.5 w-3.5" /> Avaliação</TabsTrigger>
           </TabsList>
 
-          {/* Leaders Tab */}
+          {/* Leaders */}
           <TabsContent value="leaders" className="space-y-4">
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <UserPlus className="h-4 w-4 text-primary" /> Cadastrar Novo Líder
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><UserPlus className="h-4 w-4 text-primary" /> Cadastrar Novo Líder</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateLeader} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Nome completo</Label>
-                      <Input value={leaderName} onChange={(e) => setLeaderName(e.target.value)} placeholder="Nome do líder" className="text-sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">E-mail</Label>
-                      <Input type="email" value={leaderEmail} onChange={(e) => setLeaderEmail(e.target.value)} placeholder="email@empresa.com" className="text-sm" />
-                    </div>
+                    <div className="space-y-1.5"><Label className="text-xs">Nome completo</Label><Input value={leaderName} onChange={(e) => setLeaderName(e.target.value)} placeholder="Nome do líder" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">E-mail</Label><Input type="email" value={leaderEmail} onChange={(e) => setLeaderEmail(e.target.value)} placeholder="email@empresa.com" className="text-sm" /></div>
                   </div>
-                  <div className="space-y-1.5 max-w-xs">
-                    <Label className="text-xs">Senha inicial</Label>
-                    <Input type="password" value={leaderPassword} onChange={(e) => setLeaderPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="text-sm" />
-                  </div>
-                  <Button type="submit" size="sm" disabled={loadingLeader}>
-                    <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                    {loadingLeader ? "Cadastrando..." : "Cadastrar Líder"}
-                  </Button>
+                  <div className="space-y-1.5 max-w-xs"><Label className="text-xs">Senha inicial</Label><Input type="password" value={leaderPassword} onChange={(e) => setLeaderPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="text-sm" /></div>
+                  <Button type="submit" size="sm" disabled={loadingLeader}><UserPlus className="h-3.5 w-3.5 mr-1.5" />{loadingLeader ? "Cadastrando..." : "Cadastrar Líder"}</Button>
                 </form>
               </CardContent>
             </Card>
-
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" /> Líderes Cadastrados ({profiles.length})
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Líderes Cadastrados ({profiles.length})</CardTitle></CardHeader>
               <CardContent>
-                {profiles.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nenhum líder cadastrado.</p>
-                ) : (
+                {profiles.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nenhum líder cadastrado.</p> : (
                   <div className="space-y-2">
                     {profiles.map((p, i) => (
-                      <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                        <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground flex-shrink-0">
-                          {p.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{p.full_name}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p>
-                        </div>
+                      <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground">{p.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
+                        <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{p.full_name}</p><p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p></div>
                         <Badge variant="outline" className="text-[10px] capitalize">{p.role}</Badge>
                       </motion.div>
                     ))}
@@ -218,70 +244,35 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          {/* Modules Tab */}
+          {/* Trilha / Módulos */}
           <TabsContent value="modules" className="space-y-4">
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" /> Adicionar Módulo de Trilha
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Adicionar Módulo da Trilha</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={(e) => { e.preventDefault(); createModule.mutate(); }} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Título do módulo *</Label>
-                      <Input value={modTitle} onChange={(e) => setModTitle(e.target.value)} placeholder="Ex: Comunicação Assertiva" className="text-sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Mês *</Label>
-                      <Input value={modMonth} onChange={(e) => setModMonth(e.target.value)} placeholder="Ex: Mês 1" className="text-sm" />
-                    </div>
+                    <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={modTitle} onChange={(e) => setModTitle(e.target.value)} placeholder="Ex: Comunicação Assertiva" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Mês *</Label><Input value={modMonth} onChange={(e) => setModMonth(e.target.value)} placeholder="Ex: Mês 1" className="text-sm" /></div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Descrição</Label>
-                    <Textarea value={modDescription} onChange={(e) => setModDescription(e.target.value)} placeholder="Descrição do módulo..." className="text-sm min-h-[70px]" />
-                  </div>
+                  <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea value={modDescription} onChange={(e) => setModDescription(e.target.value)} className="text-sm min-h-[70px]" /></div>
                   <div className="grid grid-cols-2 gap-4 max-w-xs">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Aulas</Label>
-                      <Input type="number" value={modLessons} onChange={(e) => setModLessons(e.target.value)} min="0" className="text-sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Atividades</Label>
-                      <Input type="number" value={modActivities} onChange={(e) => setModActivities(e.target.value)} min="0" className="text-sm" />
-                    </div>
+                    <div className="space-y-1.5"><Label className="text-xs">Aulas</Label><Input type="number" value={modLessons} onChange={(e) => setModLessons(e.target.value)} min="0" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Atividades</Label><Input type="number" value={modActivities} onChange={(e) => setModActivities(e.target.value)} min="0" className="text-sm" /></div>
                   </div>
-                  <Button type="submit" size="sm" disabled={createModule.isPending}>
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    {createModule.isPending ? "Criando..." : "Criar Módulo"}
-                  </Button>
+                  <Button type="submit" size="sm" disabled={createModule.isPending}><Plus className="h-3.5 w-3.5 mr-1.5" />{createModule.isPending ? "Criando..." : "Criar Módulo"}</Button>
                 </form>
               </CardContent>
             </Card>
-
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" /> Módulos Cadastrados ({modules.length})
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" /> Módulos ({modules.length})</CardTitle></CardHeader>
               <CardContent>
-                {modules.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nenhum módulo cadastrado.</p>
-                ) : (
+                {modules.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nenhum módulo cadastrado.</p> : (
                   <div className="space-y-2">
                     {modules.map((m, i) => (
-                      <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                          {i + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{m.month} • {m.lessons} aulas • {m.activities} atividades</p>
-                        </div>
-                      </motion.div>
+                      <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{i + 1}</div>
+                        <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{m.title}</p><p className="text-[10px] text-muted-foreground">{m.month} • {m.lessons} aulas • {m.activities} atividades</p></div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -289,71 +280,103 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          {/* Tasks Tab */}
+          {/* Tasks */}
           <TabsContent value="tasks" className="space-y-4">
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" /> Adicionar Tarefa
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Adicionar Tarefa</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={(e) => { e.preventDefault(); createTask.mutate(); }} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Título da tarefa *</Label>
-                      <Input value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Ex: Feedback para equipe" className="text-sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Semana *</Label>
-                      <Input value={taskWeek} onChange={(e) => setTaskWeek(e.target.value)} placeholder="Ex: Semana 1" className="text-sm" />
-                    </div>
+                    <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Semana *</Label><Input value={taskWeek} onChange={(e) => setTaskWeek(e.target.value)} placeholder="Ex: Semana 1" className="text-sm" /></div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Descrição</Label>
-                    <Textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} placeholder="Descrição da tarefa..." className="text-sm min-h-[70px]" />
-                  </div>
+                  <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="text-sm min-h-[70px]" /></div>
                   <div className="grid grid-cols-2 gap-4 max-w-xs">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Pontos</Label>
-                      <Input type="number" value={taskPoints} onChange={(e) => setTaskPoints(e.target.value)} min="0" className="text-sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Prazo</Label>
-                      <Input type="date" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="text-sm" />
-                    </div>
+                    <div className="space-y-1.5"><Label className="text-xs">Pontos</Label><Input type="number" value={taskPoints} onChange={(e) => setTaskPoints(e.target.value)} min="0" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Prazo</Label><Input type="date" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="text-sm" /></div>
                   </div>
-                  <Button type="submit" size="sm" disabled={createTask.isPending}>
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    {createTask.isPending ? "Criando..." : "Criar Tarefa"}
-                  </Button>
+                  <Button type="submit" size="sm" disabled={createTask.isPending}><Plus className="h-3.5 w-3.5 mr-1.5" />{createTask.isPending ? "Criando..." : "Criar Tarefa"}</Button>
                 </form>
               </CardContent>
             </Card>
-
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4 text-primary" /> Tarefas Cadastradas ({tasks.length})
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><CheckSquare className="h-4 w-4 text-primary" /> Tarefas ({tasks.length})</CardTitle></CardHeader>
               <CardContent>
-                {tasks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nenhuma tarefa cadastrada.</p>
-                ) : (
+                {tasks.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nenhuma tarefa cadastrada.</p> : (
                   <div className="space-y-2">
-                    {tasks.map((t, i) => (
-                      <motion.div key={t.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <CheckSquare className="h-4 w-4 text-primary" />
-                        </div>
+                    {tasks.map((t) => (
+                      <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><CheckSquare className="h-4 w-4 text-primary" /></div>
+                        <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.week} • +{t.points} pts{t.due_date ? ` • ${new Date(t.due_date).toLocaleDateString("pt-BR")}` : ""}</p></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Trainings */}
+          <TabsContent value="trainings" className="space-y-4">
+            <Card className="shadow-card">
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Adicionar Treinamento</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={(e) => { e.preventDefault(); createTraining.mutate(); }} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={trTitle} onChange={(e) => setTrTitle(e.target.value)} placeholder="Ex: Liderança Situacional" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Categoria</Label><Input value={trCategory} onChange={(e) => setTrCategory(e.target.value)} placeholder="Ex: Soft Skills" className="text-sm" /></div>
+                  </div>
+                  <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea value={trDescription} onChange={(e) => setTrDescription(e.target.value)} className="text-sm min-h-[70px]" /></div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5"><Label className="text-xs">Link / URL</Label><Input value={trLink} onChange={(e) => setTrLink(e.target.value)} placeholder="https://..." className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Duração (min)</Label><Input type="number" value={trDuration} onChange={(e) => setTrDuration(e.target.value)} min="0" className="text-sm" /></div>
+                  </div>
+                  <Button type="submit" size="sm" disabled={createTraining.isPending}><Plus className="h-3.5 w-3.5 mr-1.5" />{createTraining.isPending ? "Criando..." : "Criar Treinamento"}</Button>
+                </form>
+              </CardContent>
+            </Card>
+            <Card className="shadow-card">
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><GraduationCap className="h-4 w-4 text-primary" /> Treinamentos ({trainings.length})</CardTitle></CardHeader>
+              <CardContent>
+                {trainings.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nenhum treinamento cadastrado.</p> : (
+                  <div className="space-y-2">
+                    {trainings.map((t) => (
+                      <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><GraduationCap className="h-4 w-4 text-primary" /></div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{t.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{t.week} • +{t.points} pts{t.due_date ? ` • Prazo: ${new Date(t.due_date).toLocaleDateString("pt-BR")}` : ""}</p>
+                          <p className="text-sm font-medium truncate">{t.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{t.category || "Geral"}{t.duration_minutes ? ` • ${t.duration_minutes} min` : ""}</p>
                         </div>
-                        <Badge variant="outline" className="text-[10px]">{t.week}</Badge>
-                      </motion.div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Evaluation criteria */}
+          <TabsContent value="evaluation" className="space-y-4">
+            <Card className="shadow-card">
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Adicionar Critério da Avaliação 360°</CardTitle></CardHeader>
+              <CardContent>
+                <form onSubmit={(e) => { e.preventDefault(); createCriterion.mutate(); }} className="space-y-4">
+                  <div className="space-y-1.5"><Label className="text-xs">Nome do critério *</Label><Input value={critName} onChange={(e) => setCritName(e.target.value)} placeholder="Ex: Comunicação" className="text-sm" /></div>
+                  <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea value={critDescription} onChange={(e) => setCritDescription(e.target.value)} placeholder="O que será avaliado..." className="text-sm min-h-[70px]" /></div>
+                  <Button type="submit" size="sm" disabled={createCriterion.isPending}><Plus className="h-3.5 w-3.5 mr-1.5" />{createCriterion.isPending ? "Criando..." : "Criar Critério"}</Button>
+                </form>
+              </CardContent>
+            </Card>
+            <Card className="shadow-card">
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Star className="h-4 w-4 text-primary" /> Critérios ({criteria.length})</CardTitle></CardHeader>
+              <CardContent>
+                {criteria.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nenhum critério cadastrado.</p> : (
+                  <div className="space-y-2">
+                    {criteria.map((c, i) => (
+                      <div key={c.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{i + 1}</div>
+                        <div className="flex-1 min-w-0"><p className="text-sm font-medium">{c.name}</p>{c.description && <p className="text-[10px] text-muted-foreground">{c.description}</p>}</div>
+                      </div>
                     ))}
                   </div>
                 )}
