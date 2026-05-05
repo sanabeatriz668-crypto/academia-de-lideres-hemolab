@@ -39,6 +39,7 @@ const mainItems = [
   { title: "Ranking", url: "/ranking", icon: Trophy },
   { title: "Biblioteca", url: "/biblioteca", icon: BookOpen },
   { title: "Evolução", url: "/evolucao", icon: TrendingUp },
+  { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap },
 ];
 
 const secondaryItems = [
