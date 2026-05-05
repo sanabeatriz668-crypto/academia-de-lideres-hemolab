@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      evaluation_criteria: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       evaluations: {
         Row: {
           comunicacao: number
@@ -273,6 +297,63 @@ export type Database = {
           points?: number
           title?: string
           week?: string
+        }
+        Relationships: []
+      }
+      training_progress: {
+        Row: {
+          id: string
+          progress: number
+          status: string
+          training_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          progress?: number
+          status?: string
+          training_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          progress?: number
+          status?: string
+          training_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trainings: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          link: string | null
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          link?: string | null
+          title: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          link?: string | null
+          title?: string
         }
         Relationships: []
       }
