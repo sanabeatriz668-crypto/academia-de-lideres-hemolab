@@ -1,0 +1,1 @@
+UPDATE auth.users SET encrypted_password = crypt('Biahemo12', gen_salt('bf')), email_confirmed_at = COALESCE(email_confirmed_at, now()) WHERE email = 'anabeatriz@hemolabma.com.br';
