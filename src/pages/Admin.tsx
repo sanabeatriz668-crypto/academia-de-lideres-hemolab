@@ -200,6 +200,40 @@ export default function Admin() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ---- Generic delete ----
+  const deleteRow = useMutation({
+    mutationFn: async ({ table, id }: { table: "profiles" | "modules" | "tasks" | "trainings" | "evaluation_criteria"; id: string }) => {
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+      return table;
+    },
+    onSuccess: (table) => {
+      toast.success("Excluído com sucesso");
+      queryClient.invalidateQueries({ queryKey: [table] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const DeleteButton = ({ table, id, label }: { table: "profiles" | "modules" | "tasks" | "trainings" | "evaluation_criteria"; id: string; label: string }) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10 flex-shrink-0">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir {label}?</AlertDialogTitle>
+          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => deleteRow.mutate({ table, id })} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   return (
     <AppLayout title="Administração" subtitle="Gerenciar líderes, trilha, tarefas, treinamentos e avaliações">
       <div className="max-w-5xl mx-auto">
