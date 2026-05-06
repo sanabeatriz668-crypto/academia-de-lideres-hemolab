@@ -385,6 +385,7 @@ export default function Admin() {
                           <p className="text-sm font-medium truncate">{t.title}</p>
                           <p className="text-[10px] text-muted-foreground">{t.category || "Geral"}{t.duration_minutes ? ` • ${t.duration_minutes} min` : ""}</p>
                         </div>
+                        <DeleteButton table="trainings" id={t.id} label="treinamento" />
                       </div>
                     ))}
                   </div>
@@ -414,6 +415,7 @@ export default function Admin() {
                       <div key={c.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{i + 1}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium">{c.name}</p>{c.description && <p className="text-[10px] text-muted-foreground">{c.description}</p>}</div>
+                        <DeleteButton table="evaluation_criteria" id={c.id} label="critério" />
                       </div>
                     ))}
                   </div>
