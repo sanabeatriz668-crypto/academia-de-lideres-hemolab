@@ -7,12 +7,13 @@ import {
   BookOpen,
   Bell,
   Settings,
-  Beaker,
   LogOut,
   TrendingUp,
   ShieldCheck,
   GraduationCap,
+  Target,
 } from "lucide-react";
+import hemolabLogo from "@/assets/hemolab-logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +41,7 @@ const mainItems = [
   { title: "Biblioteca", url: "/biblioteca", icon: BookOpen },
   { title: "Evolução", url: "/evolucao", icon: TrendingUp },
   { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap },
+  { title: "Plano de Ação", url: "/plano-acao", icon: Target },
 ];
 
 const secondaryItems = [
@@ -66,22 +68,19 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="gradient-primary rounded-lg p-2 flex-shrink-0">
-            <Beaker className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="text-sm font-bold text-sidebar-accent-foreground tracking-tight">
-                LeaderLab
-              </h1>
-              <p className="text-[10px] text-sidebar-foreground/60">
-                Desenvolvimento de Líderes
-              </p>
-            </div>
-          )}
+      <SidebarHeader className="p-3">
+        <div className="bg-white rounded-lg p-2 flex items-center justify-center">
+          <img
+            src={hemolabLogo}
+            alt="HemoLab"
+            className={collapsed ? "h-8 w-8 object-contain" : "h-12 w-auto object-contain"}
+          />
         </div>
+        {!collapsed && (
+          <p className="text-[10px] text-sidebar-foreground/60 text-center mt-2">
+            Desenvolvimento de Líderes
+          </p>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
