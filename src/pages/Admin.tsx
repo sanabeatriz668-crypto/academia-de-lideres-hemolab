@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Plus, Users, BookOpen, CheckSquare, GraduationCap, Star } from "lucide-react";
+import { UserPlus, Plus, Users, BookOpen, CheckSquare, GraduationCap, Star, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -199,6 +200,40 @@ export default function Admin() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ---- Generic delete ----
+  const deleteRow = useMutation({
+    mutationFn: async ({ table, id }: { table: "profiles" | "modules" | "tasks" | "trainings" | "evaluation_criteria"; id: string }) => {
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+      return table;
+    },
+    onSuccess: (table) => {
+      toast.success("Excluído com sucesso");
+      queryClient.invalidateQueries({ queryKey: [table] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const DeleteButton = ({ table, id, label }: { table: "profiles" | "modules" | "tasks" | "trainings" | "evaluation_criteria"; id: string; label: string }) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10 flex-shrink-0">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir {label}?</AlertDialogTitle>
+          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => deleteRow.mutate({ table, id })} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   return (
     <AppLayout title="Administração" subtitle="Gerenciar líderes, trilha, tarefas, treinamentos e avaliações">
       <div className="max-w-5xl mx-auto">
@@ -236,6 +271,7 @@ export default function Admin() {
                         <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground">{p.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{p.full_name}</p><p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p></div>
                         <Badge variant="outline" className="text-[10px] capitalize">{p.role}</Badge>
+                        <DeleteButton table="profiles" id={p.id} label="líder" />
                       </motion.div>
                     ))}
                   </div>
@@ -272,6 +308,7 @@ export default function Admin() {
                       <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{i + 1}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{m.title}</p><p className="text-[10px] text-muted-foreground">{m.month} • {m.lessons} aulas • {m.activities} atividades</p></div>
+                        <DeleteButton table="modules" id={m.id} label="módulo" />
                       </div>
                     ))}
                   </div>
@@ -308,6 +345,7 @@ export default function Admin() {
                       <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><CheckSquare className="h-4 w-4 text-primary" /></div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.week} • +{t.points} pts{t.due_date ? ` • ${new Date(t.due_date).toLocaleDateString("pt-BR")}` : ""}</p></div>
+                        <DeleteButton table="tasks" id={t.id} label="tarefa" />
                       </div>
                     ))}
                   </div>
@@ -347,6 +385,7 @@ export default function Admin() {
                           <p className="text-sm font-medium truncate">{t.title}</p>
                           <p className="text-[10px] text-muted-foreground">{t.category || "Geral"}{t.duration_minutes ? ` • ${t.duration_minutes} min` : ""}</p>
                         </div>
+                        <DeleteButton table="trainings" id={t.id} label="treinamento" />
                       </div>
                     ))}
                   </div>
@@ -376,6 +415,7 @@ export default function Admin() {
                       <div key={c.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{i + 1}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium">{c.name}</p>{c.description && <p className="text-[10px] text-muted-foreground">{c.description}</p>}</div>
+                        <DeleteButton table="evaluation_criteria" id={c.id} label="critério" />
                       </div>
                     ))}
                   </div>
