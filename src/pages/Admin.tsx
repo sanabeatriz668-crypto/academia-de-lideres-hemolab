@@ -271,6 +271,7 @@ export default function Admin() {
                         <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground">{p.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{p.full_name}</p><p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p></div>
                         <Badge variant="outline" className="text-[10px] capitalize">{p.role}</Badge>
+                        <DeleteButton table="profiles" id={p.id} label="líder" />
                       </motion.div>
                     ))}
                   </div>
