@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, Plus, Trash2, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Target, Plus, Trash2, CheckCircle2, Clock, AlertCircle, User } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +34,34 @@ export default function PlanoAcao() {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("media");
+  const [assignedTo, setAssignedTo] = useState<string>("self");
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const isAdmin = profile?.role === "admin";
+
+  const { data: leaders = [] } = useQuery({
+    queryKey: ["leaders-list"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, role")
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: plans = [] } = useQuery({
     queryKey: ["action_plans", user?.id],
@@ -48,12 +76,16 @@ export default function PlanoAcao() {
     enabled: !!user,
   });
 
+  const leaderNameById = (id: string) =>
+    leaders.find((l) => l.user_id === id)?.full_name || "Líder";
+
   const createPlan = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Informe um título para o plano");
       if (!user) throw new Error("Usuário não autenticado");
+      const targetUserId = isAdmin && assignedTo !== "self" ? assignedTo : user.id;
       const { error } = await supabase.from("action_plans").insert({
-        user_id: user.id,
+        user_id: targetUserId,
         title: title.trim(),
         description: description.trim() || null,
         due_date: dueDate || null,
@@ -64,7 +96,7 @@ export default function PlanoAcao() {
     },
     onSuccess: () => {
       toast.success("Plano de ação criado!");
-      setTitle(""); setDescription(""); setDueDate(""); setPriority("media");
+      setTitle(""); setDescription(""); setDueDate(""); setPriority("media"); setAssignedTo("self");
       queryClient.invalidateQueries({ queryKey: ["action_plans"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -128,6 +160,29 @@ export default function PlanoAcao() {
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => { e.preventDefault(); createPlan.mutate(); }} className="space-y-4">
+              {isAdmin && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Atribuir ao líder *</Label>
+                  <Select value={assignedTo} onValueChange={setAssignedTo}>
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Selecione um líder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="self">Para mim mesmo</SelectItem>
+                      {leaders
+                        .filter((l) => l.user_id !== user?.id)
+                        .map((l) => (
+                          <SelectItem key={l.user_id} value={l.user_id}>
+                            {l.full_name} {l.role === "admin" ? "(admin)" : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">
+                    O líder selecionado verá este plano ao entrar na plataforma.
+                  </p>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs">Título *</Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Melhorar feedback à equipe" className="text-sm" />
@@ -164,7 +219,8 @@ export default function PlanoAcao() {
         <Card className="shadow-card">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" /> Meus Planos ({plans.length})
+              <Target className="h-4 w-4 text-primary" />
+              {isAdmin ? `Planos de Ação (${plans.length})` : `Meus Planos (${plans.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -191,6 +247,12 @@ export default function PlanoAcao() {
                             <Badge variant="outline" className={`text-[10px] ${priorityConfig[p.priority]?.color}`}>
                               {priorityConfig[p.priority]?.label}
                             </Badge>
+                            {isAdmin && (
+                              <Badge variant="secondary" className="text-[10px] gap-1">
+                                <User className="h-3 w-3" />
+                                {p.user_id === user?.id ? "Você" : leaderNameById(p.user_id)}
+                              </Badge>
+                            )}
                           </div>
                           {p.description && (
                             <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap">{p.description}</p>
