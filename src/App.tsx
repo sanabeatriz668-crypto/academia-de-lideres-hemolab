@@ -19,6 +19,7 @@ import Acompanhamento from "./pages/Acompanhamento";
 import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
 import PlanoAcao from "./pages/PlanoAcao";
+import Cronograma from "./pages/Cronograma";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
