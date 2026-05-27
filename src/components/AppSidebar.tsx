@@ -43,6 +43,7 @@ const mainItems = [
   { title: "Evolução", url: "/evolucao", icon: TrendingUp },
   { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap },
   { title: "Plano de Ação", url: "/plano-acao", icon: Target },
+  { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
 ];
 
 const secondaryItems = [
