@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   GraduationCap,
   Target,
+  CalendarDays,
 } from "lucide-react";
 import hemolabLogo from "@/assets/hemolab-logo.png";
 import { NavLink } from "@/components/NavLink";
