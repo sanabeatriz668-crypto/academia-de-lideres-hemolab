@@ -46,6 +46,7 @@ const App = () => (
             <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/plano-acao" element={<ProtectedRoute><PlanoAcao /></ProtectedRoute>} />
+            <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
