@@ -271,6 +271,48 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          id: string
+          instructor: string | null
+          location: string | null
+          start_time: string | null
+          title: string
+          training_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          id?: string
+          instructor?: string | null
+          location?: string | null
+          start_time?: string | null
+          title: string
+          training_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          id?: string
+          instructor?: string | null
+          location?: string | null
+          start_time?: string | null
+          title?: string
+          training_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       task_completions: {
         Row: {
           completed_at: string | null
