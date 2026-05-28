@@ -21,6 +21,7 @@ export type Database = {
           due_date: string | null
           id: string
           priority: string
+          progress_notes: string | null
           status: string
           title: string
           updated_at: string
@@ -32,6 +33,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          progress_notes?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -43,6 +45,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          progress_notes?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -170,6 +173,42 @@ export type Database = {
           id?: string
           message?: string
           target_id?: string
+        }
+        Relationships: []
+      }
+      library_files: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          title: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          title: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          title?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }
