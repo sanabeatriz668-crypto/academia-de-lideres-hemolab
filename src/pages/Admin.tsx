@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 
 export default function Admin() {
@@ -214,6 +215,18 @@ export default function Admin() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateRole = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Permissão atualizada");
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const DeleteButton = ({ table, id, label }: { table: "profiles" | "modules" | "tasks" | "trainings" | "evaluation_criteria"; id: string; label: string }) => (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -270,7 +283,13 @@ export default function Admin() {
                       <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground">{p.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{p.full_name}</p><p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p></div>
-                        <Badge variant="outline" className="text-[10px] capitalize">{p.role}</Badge>
+                        <Select value={p.role} onValueChange={(role) => updateRole.mutate({ id: p.id, role })}>
+                          <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="lider">Líder</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <DeleteButton table="profiles" id={p.id} label="líder" />
                       </motion.div>
                     ))}
