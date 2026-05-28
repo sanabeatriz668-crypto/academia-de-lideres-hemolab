@@ -215,6 +215,18 @@ export default function Admin() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateRole = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Permissão atualizada");
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const DeleteButton = ({ table, id, label }: { table: "profiles" | "modules" | "tasks" | "trainings" | "evaluation_criteria"; id: string; label: string }) => (
     <AlertDialog>
       <AlertDialogTrigger asChild>
