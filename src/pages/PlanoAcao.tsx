@@ -6,8 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, Plus, Trash2, CheckCircle2, Clock, AlertCircle, User } from "lucide-react";
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Target, Plus, Trash2, CheckCircle2, Clock, AlertCircle, User, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,15 +43,22 @@ export default function PlanoAcao() {
   const [priority, setPriority] = useState("media");
   const [assignedTo, setAssignedTo] = useState<string>("self");
 
+  const [openPlan, setOpenPlan] = useState<any | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [statusDraft, setStatusDraft] = useState("pendente");
+
+  useEffect(() => {
+    if (openPlan) {
+      setNotesDraft(openPlan.progress_notes || "");
+      setStatusDraft(openPlan.status || "pendente");
+    }
+  }, [openPlan]);
+
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", user!.id)
-        .maybeSingle();
+      const { data } = await supabase.from("profiles").select("role").eq("user_id", user!.id).maybeSingle();
       return data;
     },
   });
@@ -83,7 +97,7 @@ export default function PlanoAcao() {
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Informe um título para o plano");
       if (!user) throw new Error("Usuário não autenticado");
-      const targetUserId = isAdmin && assignedTo !== "self" ? assignedTo : user.id;
+      const targetUserId = assignedTo !== "self" ? assignedTo : user.id;
       const { error } = await supabase.from("action_plans").insert({
         user_id: targetUserId,
         title: title.trim(),
@@ -102,13 +116,16 @@ export default function PlanoAcao() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("action_plans").update({ status }).eq("id", id);
+  const updatePlan = useMutation({
+    mutationFn: async ({ id, status, progress_notes }: { id: string; status?: string; progress_notes?: string }) => {
+      const payload: any = { updated_at: new Date().toISOString() };
+      if (status !== undefined) payload.status = status;
+      if (progress_notes !== undefined) payload.progress_notes = progress_notes;
+      const { error } = await supabase.from("action_plans").update(payload).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Status atualizado");
+      toast.success("Plano atualizado");
       queryClient.invalidateQueries({ queryKey: ["action_plans"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -122,6 +139,7 @@ export default function PlanoAcao() {
     onSuccess: () => {
       toast.success("Plano removido");
       queryClient.invalidateQueries({ queryKey: ["action_plans"] });
+      setOpenPlan(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -138,29 +156,29 @@ export default function PlanoAcao() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total", value: stats.total, color: "bg-primary/10 text-primary" },
-            { label: "Pendentes", value: stats.pendentes, color: "bg-muted text-muted-foreground" },
-            { label: "Em andamento", value: stats.andamento, color: "bg-warning/10 text-warning" },
-            { label: "Concluídos", value: stats.concluidos, color: "bg-success/10 text-success" },
+            { label: "Total", value: stats.total, color: "text-primary" },
+            { label: "Pendentes", value: stats.pendentes, color: "text-muted-foreground" },
+            { label: "Em andamento", value: stats.andamento, color: "text-warning" },
+            { label: "Concluídos", value: stats.concluidos, color: "text-success" },
           ].map((s) => (
             <Card key={s.label} className="shadow-card">
               <CardContent className="p-4">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</p>
-                <p className={`text-2xl font-bold mt-1 ${s.color.split(" ")[1]}`}>{s.value}</p>
+                <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <Card className="shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Plus className="h-4 w-4 text-primary" /> Novo Plano de Ação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={(e) => { e.preventDefault(); createPlan.mutate(); }} className="space-y-4">
-              {isAdmin && (
+        {isAdmin && (
+          <Card className="shadow-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" /> Novo Plano de Ação
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={(e) => { e.preventDefault(); createPlan.mutate(); }} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Atribuir ao líder *</Label>
                   <Select value={assignedTo} onValueChange={setAssignedTo}>
@@ -178,43 +196,40 @@ export default function PlanoAcao() {
                         ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground">
-                    O líder selecionado verá este plano ao entrar na plataforma.
-                  </p>
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Título *</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Melhorar feedback à equipe" className="text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Descrição / Como pretendo fazer</Label>
-                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="text-sm min-h-[80px]" placeholder="Descreva as ações concretas que pretende realizar..." />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Prazo</Label>
-                  <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="text-sm" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Prioridade</Label>
-                  <Select value={priority} onValueChange={setPriority}>
-                    <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs">Título *</Label>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Melhorar feedback à equipe" className="text-sm" />
                 </div>
-              </div>
-              <Button type="submit" size="sm" disabled={createPlan.isPending}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                {createPlan.isPending ? "Salvando..." : "Adicionar Plano"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Descrição / Como pretendo fazer</Label>
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="text-sm min-h-[80px]" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Prazo</Label>
+                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Prioridade</Label>
+                    <Select value={priority} onValueChange={setPriority}>
+                      <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" size="sm" disabled={createPlan.isPending}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  {createPlan.isPending ? "Salvando..." : "Adicionar Plano"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-card">
           <CardHeader className="pb-3">
@@ -226,7 +241,7 @@ export default function PlanoAcao() {
           <CardContent>
             {plans.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Nenhum plano de ação criado ainda. Comece definindo sua primeira meta!
+                Nenhum plano de ação atribuído ainda.
               </p>
             ) : (
               <div className="space-y-3">
@@ -238,7 +253,8 @@ export default function PlanoAcao() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="p-4 rounded-lg border bg-card space-y-3"
+                      className="p-4 rounded-lg border bg-card space-y-3 cursor-pointer hover:border-primary/40 transition"
+                      onClick={() => setOpenPlan(p)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -255,7 +271,7 @@ export default function PlanoAcao() {
                             )}
                           </div>
                           {p.description && (
-                            <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap">{p.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap line-clamp-2">{p.description}</p>
                           )}
                           <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
                             <span className={`flex items-center gap-1 ${statusConfig[p.status]?.color}`}>
@@ -267,24 +283,9 @@ export default function PlanoAcao() {
                             )}
                           </div>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                          onClick={() => deletePlan.mutate(p.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setOpenPlan(p); }}>
+                          <Eye className="h-3.5 w-3.5 mr-1" /> Abrir
                         </Button>
-                      </div>
-                      <div className="flex gap-2">
-                        <Select value={p.status} onValueChange={(v) => updateStatus.mutate({ id: p.id, status: v })}>
-                          <SelectTrigger className="text-xs h-8 w-44"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pendente">Pendente</SelectItem>
-                            <SelectItem value="em_andamento">Em andamento</SelectItem>
-                            <SelectItem value="concluido">Concluído</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     </motion.div>
                   );
@@ -294,6 +295,90 @@ export default function PlanoAcao() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!openPlan} onOpenChange={(o) => !o && setOpenPlan(null)}>
+        <DialogContent className="max-w-2xl">
+          {openPlan && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" /> {openPlan.title}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className={`text-[10px] ${priorityConfig[openPlan.priority]?.color}`}>
+                    Prioridade: {priorityConfig[openPlan.priority]?.label}
+                  </Badge>
+                  {openPlan.due_date && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Prazo: {new Date(openPlan.due_date).toLocaleDateString("pt-BR")}
+                    </Badge>
+                  )}
+                  {isAdmin && (
+                    <Badge variant="secondary" className="text-[10px] gap-1">
+                      <User className="h-3 w-3" />
+                      {openPlan.user_id === user?.id ? "Você" : leaderNameById(openPlan.user_id)}
+                    </Badge>
+                  )}
+                </div>
+
+                {openPlan.description && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Descrição</Label>
+                    <p className="text-sm whitespace-pre-wrap mt-1">{openPlan.description}</p>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={statusDraft} onValueChange={setStatusDraft}>
+                    <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="em_andamento">Em andamento</SelectItem>
+                      <SelectItem value="concluido">Concluído</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Acompanhamento / Notas de execução</Label>
+                  <Textarea
+                    value={notesDraft}
+                    onChange={(e) => setNotesDraft(e.target.value)}
+                    className="text-sm min-h-[120px]"
+                    placeholder="Registre o que foi feito, dificuldades, próximos passos..."
+                  />
+                </div>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10 mr-auto"
+                    onClick={() => deletePlan.mutate(openPlan.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setOpenPlan(null)}>Fechar</Button>
+                <Button
+                  onClick={() =>
+                    updatePlan.mutate(
+                      { id: openPlan.id, status: statusDraft, progress_notes: notesDraft },
+                      { onSuccess: () => setOpenPlan(null) }
+                    )
+                  }
+                  disabled={updatePlan.isPending}
+                >
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
