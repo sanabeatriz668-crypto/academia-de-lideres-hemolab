@@ -20,6 +20,7 @@ import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
 import PlanoAcao from "./pages/PlanoAcao";
 import Cronograma from "./pages/Cronograma";
+import GestaoUsuarios from "./pages/GestaoUsuarios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/plano-acao" element={<ProtectedRoute><PlanoAcao /></ProtectedRoute>} />
             <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
+            <Route path="/usuarios" element={<ProtectedRoute><GestaoUsuarios /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

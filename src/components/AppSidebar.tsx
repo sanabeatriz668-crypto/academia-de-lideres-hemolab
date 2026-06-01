@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Target,
   CalendarDays,
+  Users,
 } from "lucide-react";
 import hemolabLogo from "@/assets/hemolab-logo.png";
 import { NavLink } from "@/components/NavLink";
@@ -44,6 +45,7 @@ const mainItems = [
   { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap },
   { title: "Plano de Ação", url: "/plano-acao", icon: Target },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
+  { title: "Gestão de Usuários", url: "/usuarios", icon: Users },
 ];
 
 const secondaryItems = [
