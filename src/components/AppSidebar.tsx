@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Target,
   CalendarDays,
+  Users,
 } from "lucide-react";
 import hemolabLogo from "@/assets/hemolab-logo.png";
 import { NavLink } from "@/components/NavLink";
