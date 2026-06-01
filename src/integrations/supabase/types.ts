@@ -77,6 +77,36 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_forms: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       evaluations: {
         Row: {
           comunicacao: number
@@ -175,6 +205,115 @@ export type Database = {
           target_id?: string
         }
         Relationships: []
+      }
+      form_answers: {
+        Row: {
+          answer_number: number | null
+          answer_text: string | null
+          created_at: string
+          id: string
+          question_id: string
+          response_id: string
+        }
+        Insert: {
+          answer_number?: number | null
+          answer_text?: string | null
+          created_at?: string
+          id?: string
+          question_id: string
+          response_id: string
+        }
+        Update: {
+          answer_number?: number | null
+          answer_text?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string
+          response_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "form_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "form_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_questions: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          options: Json | null
+          question_text: string
+          question_type: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          options?: Json | null
+          question_text: string
+          question_type?: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          options?: Json | null
+          question_text?: string
+          question_type?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          respondent_id: string
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          respondent_id: string
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          respondent_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_forms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       library_files: {
         Row: {
@@ -286,6 +425,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          leader_id: string | null
           role: string
           updated_at: string
           user_id: string
@@ -295,6 +435,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          leader_id?: string | null
           role?: string
           updated_at?: string
           user_id: string
@@ -304,6 +445,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          leader_id?: string | null
           role?: string
           updated_at?: string
           user_id?: string
