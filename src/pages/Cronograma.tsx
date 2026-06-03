@@ -71,6 +71,7 @@ export default function Cronograma() {
     end_time: "",
     instructor: "",
     location: "",
+    class_id: "",
   });
 
   const { data: profile } = useQuery({
