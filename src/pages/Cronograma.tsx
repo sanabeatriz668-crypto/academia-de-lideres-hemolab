@@ -51,6 +51,7 @@ type ScheduleEvent = {
   end_time: string | null;
   instructor: string | null;
   location: string | null;
+  class_id: string | null;
 };
 
 type ClassRow = { id: string; name: string; description: string | null };
