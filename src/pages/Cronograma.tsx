@@ -51,6 +51,7 @@ type ScheduleEvent = {
   end_time: string | null;
   instructor: string | null;
   location: string | null;
+  class_id: string | null;
 };
 
 type ClassRow = { id: string; name: string; description: string | null };
@@ -70,6 +71,7 @@ export default function Cronograma() {
     end_time: "",
     instructor: "",
     location: "",
+    class_id: "",
   });
 
   const { data: profile } = useQuery({
@@ -85,6 +87,19 @@ export default function Cronograma() {
     },
   });
   const isAdmin = profile?.role === "admin";
+
+  const { data: classesList = [] } = useQuery({
+    queryKey: ["classes"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("classes")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["schedule_events"],
@@ -108,8 +123,9 @@ export default function Cronograma() {
         end_time: form.end_time || null,
         instructor: form.instructor || null,
         location: form.location || null,
+        class_id: form.class_id || null,
       };
-      const { error } = await supabase.from("schedule_events").insert(payload);
+      const { error } = await (supabase as any).from("schedule_events").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -124,6 +140,7 @@ export default function Cronograma() {
         end_time: "",
         instructor: "",
         location: "",
+        class_id: "",
       });
     },
     onError: (e: any) =>
@@ -238,6 +255,27 @@ export default function Cronograma() {
                           placeholder="Sala, link, endereço..."
                         />
                       </div>
+                      <div>
+                        <Label>Turma</Label>
+                        <Select
+                          value={form.class_id || "none"}
+                          onValueChange={(v) =>
+                            setForm({ ...form, class_id: v === "none" ? "" : v })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma turma (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sem turma</SelectItem>
+                            {classesList.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button
@@ -320,6 +358,14 @@ export default function Cronograma() {
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <MapPin className="h-4 w-4" />
                           <span>{ev.location}</span>
+                        </div>
+                      )}
+                      {ev.class_id && (
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-primary" />
+                          <span className="text-sm">
+                            {classesList.find((c) => c.id === ev.class_id)?.name ?? "Turma"}
+                          </span>
                         </div>
                       )}
                     </CardContent>
