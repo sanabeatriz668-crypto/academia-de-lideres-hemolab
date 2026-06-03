@@ -255,6 +255,27 @@ export default function Cronograma() {
                           placeholder="Sala, link, endereço..."
                         />
                       </div>
+                      <div>
+                        <Label>Turma</Label>
+                        <Select
+                          value={form.class_id || "none"}
+                          onValueChange={(v) =>
+                            setForm({ ...form, class_id: v === "none" ? "" : v })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma turma (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sem turma</SelectItem>
+                            {classesList.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button
