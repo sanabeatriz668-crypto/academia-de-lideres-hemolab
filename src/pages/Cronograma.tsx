@@ -110,8 +110,9 @@ export default function Cronograma() {
         end_time: form.end_time || null,
         instructor: form.instructor || null,
         location: form.location || null,
+        class_id: form.class_id || null,
       };
-      const { error } = await supabase.from("schedule_events").insert(payload);
+      const { error } = await (supabase as any).from("schedule_events").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -126,6 +127,7 @@ export default function Cronograma() {
         end_time: "",
         instructor: "",
         location: "",
+        class_id: "",
       });
     },
     onError: (e: any) =>
