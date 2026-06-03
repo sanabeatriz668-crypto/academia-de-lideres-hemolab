@@ -360,6 +360,14 @@ export default function Cronograma() {
                           <span>{ev.location}</span>
                         </div>
                       )}
+                      {ev.class_id && (
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-primary" />
+                          <span className="text-sm">
+                            {classesList.find((c) => c.id === ev.class_id)?.name ?? "Turma"}
+                          </span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
