@@ -88,6 +88,19 @@ export default function Cronograma() {
   });
   const isAdmin = profile?.role === "admin";
 
+  const { data: classesList = [] } = useQuery({
+    queryKey: ["classes"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("classes")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["schedule_events"],
     queryFn: async () => {
