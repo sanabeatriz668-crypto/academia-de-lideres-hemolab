@@ -507,6 +507,7 @@ export type Database = {
       }
       schedule_events: {
         Row: {
+          class_id: string | null
           created_at: string
           description: string | null
           end_time: string | null
@@ -520,6 +521,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          class_id?: string | null
           created_at?: string
           description?: string | null
           end_time?: string | null
@@ -533,6 +535,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          class_id?: string | null
           created_at?: string
           description?: string | null
           end_time?: string | null
@@ -545,7 +548,15 @@ export type Database = {
           training_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schedule_events_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_completions: {
         Row: {
