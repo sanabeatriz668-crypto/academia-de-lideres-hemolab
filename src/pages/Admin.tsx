@@ -407,6 +407,7 @@ export default function Admin() {
                           <p className="text-sm font-medium truncate">{t.title}</p>
                           <p className="text-[10px] text-muted-foreground">{t.category || "Geral"}{t.duration_minutes ? ` • ${t.duration_minutes} min` : ""}</p>
                         </div>
+                        <TrainingDocsManager trainingId={t.id} trainingTitle={t.title} />
                         <DeleteButton table="trainings" id={t.id} label="treinamento" />
                       </div>
                     ))}
