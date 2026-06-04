@@ -111,14 +111,33 @@ export default function Biblioteca() {
   });
 
   const handleDownload = async (item: any) => {
-    const { data, error } = await supabase.storage.from("library").createSignedUrl(item.file_path, 60, {
-      download: item.title,
-    });
+    // Garante extensão correta (especialmente .pdf) no nome baixado
+    const origExt = item.file_path.split(".").pop()?.split("?")[0] || "";
+    const titleHasExt = /\.[a-z0-9]{1,5}$/i.test(item.title);
+    const filename = titleHasExt || !origExt ? item.title : `${item.title}.${origExt}`;
+
+    const { data, error } = await supabase.storage
+      .from("library")
+      .createSignedUrl(item.file_path, 60, { download: filename });
     if (error || !data?.signedUrl) {
       toast.error("Erro ao gerar link de download");
       return;
     }
-    window.open(data.signedUrl, "_blank");
+    try {
+      const resp = await fetch(data.signedUrl);
+      if (!resp.ok) throw new Error("fail");
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(data.signedUrl, "_blank");
+    }
   };
 
   const filtered = files.filter(

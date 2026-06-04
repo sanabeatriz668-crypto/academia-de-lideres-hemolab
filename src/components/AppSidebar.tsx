@@ -19,6 +19,8 @@ import hemolabLogo from "@/assets/hemolab-logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -35,23 +37,23 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Trilha", url: "/trilha", icon: Route },
-  { title: "Tarefas", url: "/tarefas", icon: CheckSquare },
-  { title: "Avaliação 360°", url: "/avaliacao", icon: MessageSquare },
-  { title: "Ranking", url: "/ranking", icon: Trophy },
-  { title: "Biblioteca", url: "/biblioteca", icon: BookOpen },
-  { title: "Evolução", url: "/evolucao", icon: TrendingUp },
-  { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap },
-  { title: "Plano de Ação", url: "/plano-acao", icon: Target },
-  { title: "Cronograma", url: "/cronograma", icon: CalendarDays },
-  { title: "Gestão de Usuários", url: "/usuarios", icon: Users },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin","lider","participante"] },
+  { title: "Trilha", url: "/trilha", icon: Route, roles: ["admin","lider","participante"] },
+  { title: "Tarefas", url: "/tarefas", icon: CheckSquare, roles: ["admin","lider","participante"] },
+  { title: "Avaliação 360°", url: "/avaliacao", icon: MessageSquare, roles: ["admin","lider","participante"] },
+  { title: "Ranking", url: "/ranking", icon: Trophy, roles: ["admin","lider","participante"] },
+  { title: "Biblioteca", url: "/biblioteca", icon: BookOpen, roles: ["admin","lider","participante"] },
+  { title: "Evolução", url: "/evolucao", icon: TrendingUp, roles: ["admin","lider","participante"] },
+  { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap, roles: ["admin","lider"] },
+  { title: "Plano de Ação", url: "/plano-acao", icon: Target, roles: ["admin","lider","participante"] },
+  { title: "Cronograma", url: "/cronograma", icon: CalendarDays, roles: ["admin","lider","participante"] },
+  { title: "Gestão de Usuários", url: "/usuarios", icon: Users, roles: ["admin"] },
 ];
 
 const secondaryItems = [
-  { title: "Administração", url: "/admin", icon: ShieldCheck },
-  { title: "Notificações", url: "/notificacoes", icon: Bell },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
+  { title: "Administração", url: "/admin", icon: ShieldCheck, roles: ["admin"] },
+  { title: "Notificações", url: "/notificacoes", icon: Bell, roles: ["admin","lider","participante"] },
+  { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ["admin","lider","participante"] },
 ];
 
 export function AppSidebar() {
@@ -59,6 +61,22 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { user, signOut } = useAuth();
+
+  const { data: profile } = useQuery({
+    queryKey: ["sidebar-role", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const role = profile?.role ?? "participante";
+  const visibleMain = mainItems.filter((i) => i.roles.includes(role));
+  const visibleSecondary = secondaryItems.filter((i) => i.roles.includes(role));
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
@@ -94,7 +112,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {visibleMain.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink
@@ -118,7 +136,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {secondaryItems.map((item) => (
+              {visibleSecondary.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink

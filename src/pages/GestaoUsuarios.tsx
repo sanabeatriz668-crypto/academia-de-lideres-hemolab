@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { signupClient } from "@/integrations/supabase/signup-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,21 +72,24 @@ export default function GestaoUsuarios() {
     if (!name.trim() || !email.trim() || !password.trim()) { toast.error("Preencha todos os campos"); return; }
     if (password.length < 6) { toast.error("Senha deve ter no mínimo 6 caracteres"); return; }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
+    // Usa um cliente separado que NÃO persiste sessão, para não deslogar o admin
+    const { data, error } = await signupClient.auth.signUp({
       email, password,
       options: { data: { full_name: name } },
     });
     if (error) { setLoading(false); toast.error(error.message); return; }
 
-    // Atualiza role + leader_id após o trigger criar o perfil
+    // Atualiza role + leader_id após o trigger criar o perfil (executado pelo admin atual)
     if (data.user) {
-      // pequeno delay para garantir profile criado
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 700));
       await supabase.from("profiles").update({
         role,
         leader_id: leaderId !== "none" ? leaderId : null,
       }).eq("user_id", data.user.id);
     }
+    // Encerra qualquer sessão criada no cliente auxiliar (não afeta o admin)
+    await signupClient.auth.signOut();
+
     setLoading(false);
     toast.success("Usuário cadastrado!");
     setName(""); setEmail(""); setPassword(""); setRole("participante"); setLeaderId("none");
