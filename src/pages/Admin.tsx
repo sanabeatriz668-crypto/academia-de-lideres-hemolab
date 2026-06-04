@@ -5,10 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Plus, Users, BookOpen, CheckSquare, GraduationCap, Star, Trash2 } from "lucide-react";
+import { UserPlus, Plus, Users, BookOpen, CheckSquare, GraduationCap, Star, Trash2, HelpCircle, FileText, Upload } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -364,6 +366,7 @@ export default function Admin() {
                       <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><CheckSquare className="h-4 w-4 text-primary" /></div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.week} • +{t.points} pts{t.due_date ? ` • ${new Date(t.due_date).toLocaleDateString("pt-BR")}` : ""}</p></div>
+                        <TaskQuestionsManager taskId={t.id} taskTitle={t.title} />
                         <DeleteButton table="tasks" id={t.id} label="tarefa" />
                       </div>
                     ))}
@@ -404,6 +407,7 @@ export default function Admin() {
                           <p className="text-sm font-medium truncate">{t.title}</p>
                           <p className="text-[10px] text-muted-foreground">{t.category || "Geral"}{t.duration_minutes ? ` • ${t.duration_minutes} min` : ""}</p>
                         </div>
+                        <TrainingDocsManager trainingId={t.id} trainingTitle={t.title} />
                         <DeleteButton table="trainings" id={t.id} label="treinamento" />
                       </div>
                     ))}
@@ -445,5 +449,187 @@ export default function Admin() {
         </Tabs>
       </div>
     </AppLayout>
+  );
+}
+
+function TaskQuestionsManager({ taskId, taskTitle }: { taskId: string; taskTitle: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+
+  const { data: questions = [] } = useQuery({
+    queryKey: ["task_questions", taskId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("task_questions")
+        .select("*")
+        .eq("task_id", taskId)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addQ = useMutation({
+    mutationFn: async () => {
+      if (!text.trim()) throw new Error("Digite a pergunta");
+      const { error } = await supabase.from("task_questions").insert({
+        task_id: taskId,
+        question_text: text.trim(),
+        question_type: "text",
+        sort_order: questions.length,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setText("");
+      qc.invalidateQueries({ queryKey: ["task_questions", taskId] });
+      toast.success("Pergunta adicionada");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const delQ = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("task_questions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["task_questions", taskId] }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-primary hover:bg-primary/10" title="Perguntas">
+          <HelpCircle className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-sm">Perguntas: {taskTitle}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Digite a pergunta para o participante..." className="text-sm min-h-[60px]" />
+            <Button size="sm" onClick={() => addQ.mutate()} disabled={addQ.isPending} className="self-end">
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {questions.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhuma pergunta ainda.</p>
+            ) : questions.map((q: any, i: number) => (
+              <div key={q.id} className="flex items-start gap-2 p-2 rounded border bg-card">
+                <Badge variant="outline" className="text-[10px]">{i + 1}</Badge>
+                <p className="flex-1 text-xs">{q.question_text}</p>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => delQ.mutate(q.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TrainingDocsManager({ trainingId, trainingTitle }: { trainingId: string; trainingTitle: string }) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: docs = [] } = useQuery({
+    queryKey: ["training_documents", trainingId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("training_documents")
+        .select("*")
+        .eq("training_id", trainingId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const upload = async () => {
+    if (!file || !title.trim() || !user) {
+      toast.error("Informe título e arquivo");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `trainings/${trainingId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("library").upload(path, file, { contentType: file.type });
+      if (upErr) throw upErr;
+      const { error } = await supabase.from("training_documents").insert({
+        training_id: trainingId,
+        title: title.trim(),
+        file_path: path,
+        file_type: file.type,
+        file_size: file.size,
+        uploaded_by: user.id,
+      });
+      if (error) throw error;
+      toast.success("Documento enviado");
+      setTitle(""); setFile(null);
+      qc.invalidateQueries({ queryKey: ["training_documents", trainingId] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const delDoc = useMutation({
+    mutationFn: async (doc: any) => {
+      await supabase.storage.from("library").remove([doc.file_path]);
+      const { error } = await supabase.from("training_documents").delete().eq("id", doc.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["training_documents", trainingId] }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-primary hover:bg-primary/10" title="Documentos">
+          <FileText className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-sm">Documentos: {trainingTitle}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-2 p-3 border rounded">
+            <Input placeholder="Título do documento" value={title} onChange={(e) => setTitle(e.target.value)} className="text-sm" />
+            <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-sm" />
+            <Button size="sm" onClick={upload} disabled={uploading}>
+              <Upload className="h-3.5 w-3.5 mr-1.5" />{uploading ? "Enviando..." : "Enviar documento"}
+            </Button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {docs.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhum documento ainda.</p>
+            ) : docs.map((d: any) => (
+              <div key={d.id} className="flex items-center gap-2 p-2 rounded border bg-card">
+                <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                <p className="flex-1 text-xs truncate">{d.title}</p>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => delDoc.mutate(d)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -22,6 +22,7 @@ import Configuracoes from "./pages/Configuracoes";
 import PlanoAcao from "./pages/PlanoAcao";
 import Cronograma from "./pages/Cronograma";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
+import Treinamentos from "./pages/Treinamentos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/plano-acao" element={<ProtectedRoute><PlanoAcao /></ProtectedRoute>} />
             <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
             <Route path="/usuarios" element={<RoleRoute allow={["admin"]}><GestaoUsuarios /></RoleRoute>} />
+            <Route path="/treinamentos" element={<ProtectedRoute><Treinamentos /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

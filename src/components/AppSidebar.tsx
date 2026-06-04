@@ -47,6 +47,7 @@ const mainItems = [
   { title: "Acompanhamento", url: "/acompanhamento", icon: GraduationCap, roles: ["admin","lider"] },
   { title: "Plano de Ação", url: "/plano-acao", icon: Target, roles: ["admin","lider","participante"] },
   { title: "Cronograma", url: "/cronograma", icon: CalendarDays, roles: ["admin","lider","participante"] },
+  { title: "Treinamentos", url: "/treinamentos", icon: GraduationCap, roles: ["admin","lider","participante"] },
   { title: "Gestão de Usuários", url: "/usuarios", icon: Users, roles: ["admin"] },
 ];
 

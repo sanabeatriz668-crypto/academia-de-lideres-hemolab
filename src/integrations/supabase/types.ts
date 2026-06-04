@@ -593,6 +593,79 @@ export type Database = {
           },
         ]
       }
+      task_question_answers: {
+        Row: {
+          answer_text: string | null
+          created_at: string
+          id: string
+          question_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer_text?: string | null
+          created_at?: string
+          id?: string
+          question_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer_text?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_question_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "task_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_questions: {
+        Row: {
+          created_at: string
+          id: string
+          options: Json | null
+          question_text: string
+          question_type: string
+          sort_order: number
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          question_text: string
+          question_type?: string
+          sort_order?: number
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          question_text?: string
+          question_type?: string
+          sort_order?: number
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_questions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           created_at: string
@@ -622,6 +695,47 @@ export type Database = {
           week?: string
         }
         Relationships: []
+      }
+      training_documents: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          title: string
+          training_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          title: string
+          training_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          title?: string
+          training_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_documents_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_progress: {
         Row: {
