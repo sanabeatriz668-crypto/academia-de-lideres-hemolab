@@ -124,7 +124,52 @@ export default function Tarefas() {
 function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
   task: any; done: boolean; reflection: string; onToggle: () => void; onSaveReflection: (r: string) => void;
 }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [text, setText] = useState(reflection);
+
+  const { data: questions = [] } = useQuery({
+    queryKey: ["task_questions", task.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("task_questions")
+        .select("*")
+        .eq("task_id", task.id)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: answers = [] } = useQuery({
+    queryKey: ["task_question_answers", task.id, user?.id],
+    enabled: !!user && questions.length > 0,
+    queryFn: async () => {
+      const ids = questions.map((q: any) => q.id);
+      const { data, error } = await supabase
+        .from("task_question_answers")
+        .select("*")
+        .eq("user_id", user!.id)
+        .in("question_id", ids);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const saveAnswer = useMutation({
+    mutationFn: async ({ questionId, answer }: { questionId: string; answer: string }) => {
+      const { error } = await supabase.from("task_question_answers").upsert(
+        { question_id: questionId, user_id: user!.id, answer_text: answer },
+        { onConflict: "question_id,user_id" }
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Resposta salva!");
+      queryClient.invalidateQueries({ queryKey: ["task_question_answers", task.id, user?.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <Card className={`shadow-card transition-all ${done ? "border-success/30 bg-success/5" : ""}`}>
@@ -147,6 +192,20 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
             )}
           </div>
         </div>
+        {questions.length > 0 && (
+          <div className="ml-7 space-y-3 pt-2 border-t">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Perguntas</p>
+            {questions.map((q: any, idx: number) => (
+              <QuestionField
+                key={q.id}
+                index={idx}
+                question={q}
+                initial={answers.find((a: any) => a.question_id === q.id)?.answer_text || ""}
+                onSave={(a) => saveAnswer.mutate({ questionId: q.id, answer: a })}
+              />
+            ))}
+          </div>
+        )}
         {done && (
           <div className="ml-7 space-y-2">
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">O que você aplicou na prática?</p>
@@ -160,5 +219,20 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function QuestionField({ index, question, initial, onSave }: { index: number; question: any; initial: string; onSave: (a: string) => void }) {
+  const [val, setVal] = useState(initial);
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-foreground">{index + 1}. {question.question_text}</p>
+      <div className="flex gap-2">
+        <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder="Sua resposta..." className="text-xs min-h-[50px]" />
+        <Button size="icon" variant="ghost" className="self-end" onClick={() => onSave(val)}>
+          <Send className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
   );
 }
