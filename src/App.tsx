@@ -43,13 +43,13 @@ const App = () => (
             <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
             <Route path="/biblioteca" element={<ProtectedRoute><Biblioteca /></ProtectedRoute>} />
             <Route path="/evolucao" element={<ProtectedRoute><Evolucao /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-            <Route path="/acompanhamento" element={<ProtectedRoute><Acompanhamento /></ProtectedRoute>} />
+            <Route path="/admin" element={<RoleRoute allow={["admin"]}><Admin /></RoleRoute>} />
+            <Route path="/acompanhamento" element={<RoleRoute allow={["admin","lider"]}><Acompanhamento /></RoleRoute>} />
             <Route path="/notificacoes" element={<ProtectedRoute><Notificacoes /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="/plano-acao" element={<ProtectedRoute><PlanoAcao /></ProtectedRoute>} />
             <Route path="/cronograma" element={<ProtectedRoute><Cronograma /></ProtectedRoute>} />
-            <Route path="/usuarios" element={<ProtectedRoute><GestaoUsuarios /></ProtectedRoute>} />
+            <Route path="/usuarios" element={<RoleRoute allow={["admin"]}><GestaoUsuarios /></RoleRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
