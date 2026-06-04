@@ -366,6 +366,7 @@ export default function Admin() {
                       <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><CheckSquare className="h-4 w-4 text-primary" /></div>
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.week} • +{t.points} pts{t.due_date ? ` • ${new Date(t.due_date).toLocaleDateString("pt-BR")}` : ""}</p></div>
+                        <TaskQuestionsManager taskId={t.id} taskTitle={t.title} />
                         <DeleteButton table="tasks" id={t.id} label="tarefa" />
                       </div>
                     ))}
