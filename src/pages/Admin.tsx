@@ -103,6 +103,7 @@ export default function Admin() {
   // ---- Tasks ----
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
+  const [taskCaseStudy, setTaskCaseStudy] = useState("");
   const [taskWeek, setTaskWeek] = useState("");
   const [taskPoints, setTaskPoints] = useState("10");
   const [taskDueDate, setTaskDueDate] = useState("");
@@ -122,15 +123,16 @@ export default function Admin() {
       const { error } = await supabase.from("tasks").insert({
         title: taskTitle.trim(),
         description: taskDescription.trim() || null,
+        case_study: taskCaseStudy.trim() || null,
         week: taskWeek.trim(),
         points: parseInt(taskPoints) || 0,
         due_date: taskDueDate || null,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Tarefa criada!");
-      setTaskTitle(""); setTaskDescription(""); setTaskWeek(""); setTaskPoints("10"); setTaskDueDate("");
+      setTaskTitle(""); setTaskDescription(""); setTaskCaseStudy(""); setTaskWeek(""); setTaskPoints("10"); setTaskDueDate("");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -349,8 +351,12 @@ export default function Admin() {
                     <div className="space-y-1.5"><Label className="text-xs">Semana *</Label><Input value={taskWeek} onChange={(e) => setTaskWeek(e.target.value)} placeholder="Ex: Semana 1" className="text-sm" /></div>
                   </div>
                   <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="text-sm min-h-[70px]" /></div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Estudo de caso (texto que o participante lerá antes de responder)</Label>
+                    <Textarea value={taskCaseStudy} onChange={(e) => setTaskCaseStudy(e.target.value)} placeholder="Descreva o contexto / situação-problema..." className="text-sm min-h-[120px]" />
+                  </div>
                   <div className="grid grid-cols-2 gap-4 max-w-xs">
-                    <div className="space-y-1.5"><Label className="text-xs">Pontos</Label><Input type="number" value={taskPoints} onChange={(e) => setTaskPoints(e.target.value)} min="0" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Pontos totais</Label><Input type="number" value={taskPoints} onChange={(e) => setTaskPoints(e.target.value)} min="0" className="text-sm" /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Prazo</Label><Input type="date" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="text-sm" /></div>
                   </div>
                   <Button type="submit" size="sm" disabled={createTask.isPending}><Plus className="h-3.5 w-3.5 mr-1.5" />{createTask.isPending ? "Criando..." : "Criar Tarefa"}</Button>
@@ -456,6 +462,7 @@ function TaskQuestionsManager({ taskId, taskTitle }: { taskId: string; taskTitle
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [pts, setPts] = useState("0");
 
   const { data: questions = [] } = useQuery({
     queryKey: ["task_questions", taskId],
@@ -471,6 +478,8 @@ function TaskQuestionsManager({ taskId, taskTitle }: { taskId: string; taskTitle
     },
   });
 
+  const totalPts = (questions as any[]).reduce((s, q) => s + (q.points || 0), 0);
+
   const addQ = useMutation({
     mutationFn: async () => {
       if (!text.trim()) throw new Error("Digite a pergunta");
@@ -479,15 +488,24 @@ function TaskQuestionsManager({ taskId, taskTitle }: { taskId: string; taskTitle
         question_text: text.trim(),
         question_type: "text",
         sort_order: questions.length,
-      });
+        points: parseInt(pts) || 0,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
-      setText("");
+      setText(""); setPts("0");
       qc.invalidateQueries({ queryKey: ["task_questions", taskId] });
       toast.success("Pergunta adicionada");
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updatePts = useMutation({
+    mutationFn: async ({ id, points }: { id: string; points: number }) => {
+      const { error } = await supabase.from("task_questions").update({ points } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["task_questions", taskId] }),
   });
 
   const delQ = useMutation({
@@ -510,11 +528,21 @@ function TaskQuestionsManager({ taskId, taskTitle }: { taskId: string; taskTitle
           <DialogTitle className="text-sm">Perguntas: {taskTitle}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex items-center justify-between text-xs px-1">
+            <span className="text-muted-foreground">Soma dos pontos das perguntas</span>
+            <Badge variant={totalPts === 10 ? "default" : "outline"}>{totalPts} / 10 pts</Badge>
+          </div>
+          <div className="space-y-2 border rounded p-2">
             <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Digite a pergunta para o participante..." className="text-sm min-h-[60px]" />
-            <Button size="sm" onClick={() => addQ.mutate()} disabled={addQ.isPending} className="self-end">
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex gap-2 items-end">
+              <div className="space-y-1 flex-1">
+                <Label className="text-[10px]">Pontos desta pergunta</Label>
+                <Input type="number" min="0" value={pts} onChange={(e) => setPts(e.target.value)} className="text-sm h-8" />
+              </div>
+              <Button size="sm" onClick={() => addQ.mutate()} disabled={addQ.isPending}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
+              </Button>
+            </div>
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {questions.length === 0 ? (
@@ -523,6 +551,17 @@ function TaskQuestionsManager({ taskId, taskTitle }: { taskId: string; taskTitle
               <div key={q.id} className="flex items-start gap-2 p-2 rounded border bg-card">
                 <Badge variant="outline" className="text-[10px]">{i + 1}</Badge>
                 <p className="flex-1 text-xs">{q.question_text}</p>
+                <Input
+                  type="number"
+                  min="0"
+                  defaultValue={q.points || 0}
+                  onBlur={(e) => {
+                    const v = parseInt(e.target.value) || 0;
+                    if (v !== (q.points || 0)) updatePts.mutate({ id: q.id, points: v });
+                  }}
+                  className="w-14 h-7 text-xs"
+                  title="Pontos"
+                />
                 <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => delQ.mutate(q.id)}>
                   <Trash2 className="h-3 w-3" />
                 </Button>

@@ -40,6 +40,7 @@ type Question = {
   question_text: string;
   question_type: "text" | "scale" | "choice";
   options: string[] | null;
+  correct_answer: string | null;
   sort_order: number;
 };
 
@@ -350,13 +351,14 @@ function ManageQuestionsDialog({ form, onClose }: { form: any; onClose: () => vo
   const [text, setText] = useState("");
   const [type, setType] = useState<"text" | "scale" | "choice">("text");
   const [optionsRaw, setOptionsRaw] = useState("");
+  const [correct, setCorrect] = useState("");
 
   const { data: questions = [] } = useQuery({
     queryKey: ["form_questions", form.id],
     queryFn: async () => {
       const { data, error } = await supabase.from("form_questions").select("*").eq("form_id", form.id).order("sort_order");
       if (error) throw error;
-      return data as Question[];
+      return data as any[];
     },
   });
 
@@ -367,18 +369,22 @@ function ManageQuestionsDialog({ form, onClose }: { form: any; onClose: () => vo
         ? optionsRaw.split(",").map((s) => s.trim()).filter(Boolean)
         : null;
       if (type === "choice" && (!options || options.length < 2)) throw new Error("Adicione ao menos 2 opções (separadas por vírgula)");
+      if (type === "choice" && correct.trim() && !options!.includes(correct.trim())) {
+        throw new Error("A alternativa correta precisa ser igual a uma das opções");
+      }
       const { error } = await supabase.from("form_questions").insert({
         form_id: form.id,
         question_text: text.trim(),
         question_type: type,
         options,
+        correct_answer: type === "choice" && correct.trim() ? correct.trim() : null,
         sort_order: questions.length,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Pergunta adicionada");
-      setText(""); setOptionsRaw(""); setType("text");
+      setText(""); setOptionsRaw(""); setType("text"); setCorrect("");
       queryClient.invalidateQueries({ queryKey: ["form_questions", form.id] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -424,6 +430,20 @@ function ManageQuestionsDialog({ form, onClose }: { form: any; onClose: () => vo
               </div>
             )}
           </div>
+          {type === "choice" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Alternativa correta (opcional — deixe em branco para questão sem gabarito)</Label>
+              <Select value={correct || "__none"} onValueChange={(v) => setCorrect(v === "__none" ? "" : v)}>
+                <SelectTrigger className="text-sm"><SelectValue placeholder="Selecione a alternativa correta" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem gabarito</SelectItem>
+                  {optionsRaw.split(",").map((s) => s.trim()).filter(Boolean).map((op) => (
+                    <SelectItem key={op} value={op}>{op}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button size="sm" onClick={() => addQuestion.mutate()} disabled={addQuestion.isPending}>
             <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar pergunta
           </Button>
@@ -440,6 +460,9 @@ function ManageQuestionsDialog({ form, onClose }: { form: any; onClose: () => vo
                 <p className="text-[10px] text-muted-foreground">
                   {q.question_type === "text" ? "Texto livre" : q.question_type === "scale" ? "Escala 1-5" : `Opções: ${(q.options ?? []).join(", ")}`}
                 </p>
+                {q.correct_answer && (
+                  <p className="text-[10px] text-success font-medium mt-0.5">✓ Correta: {q.correct_answer}</p>
+                )}
               </div>
               <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeQuestion.mutate(q.id)}>
                 <Trash2 className="h-3.5 w-3.5" />
@@ -630,11 +653,18 @@ function ResultsDialog({ form, onClose }: { form: any; onClose: () => void }) {
                   <div className="space-y-2">
                     {ras.map((a: any) => {
                       const q = questionById[a.question_id];
+                      const isChoice = q?.question_type === "choice" && q?.correct_answer;
+                      const isCorrect = isChoice && a.answer_text === q.correct_answer;
                       return (
                         <div key={a.id} className="text-xs">
                           <p className="text-muted-foreground">{q?.question_text ?? "Pergunta"}</p>
                           <p className="text-foreground font-medium">
                             {a.answer_number ?? a.answer_text ?? "—"}
+                            {isChoice && (
+                              <span className={`ml-2 text-[10px] font-semibold ${isCorrect ? "text-success" : "text-destructive"}`}>
+                                {isCorrect ? "✓ Correta" : `✗ (correta: ${q.correct_answer})`}
+                              </span>
+                            )}
                           </p>
                         </div>
                       );
