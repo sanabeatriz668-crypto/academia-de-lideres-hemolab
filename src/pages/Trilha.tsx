@@ -111,7 +111,7 @@ export default function Trilha() {
   };
 
 
-  const completed = progressData.filter((p) => p.status === "concluido").length;
+  const completed = (modules as any[]).filter((m) => getProgress(m.id)?.status === "concluido").length;
 
   return (
     <AppLayout title="Trilha de Desenvolvimento" subtitle="Seu programa de 3 meses">
