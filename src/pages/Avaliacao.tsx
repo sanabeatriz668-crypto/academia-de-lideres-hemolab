@@ -652,11 +652,18 @@ function ResultsDialog({ form, onClose }: { form: any; onClose: () => void }) {
                   <div className="space-y-2">
                     {ras.map((a: any) => {
                       const q = questionById[a.question_id];
+                      const isChoice = q?.question_type === "choice" && q?.correct_answer;
+                      const isCorrect = isChoice && a.answer_text === q.correct_answer;
                       return (
                         <div key={a.id} className="text-xs">
                           <p className="text-muted-foreground">{q?.question_text ?? "Pergunta"}</p>
                           <p className="text-foreground font-medium">
                             {a.answer_number ?? a.answer_text ?? "—"}
+                            {isChoice && (
+                              <span className={`ml-2 text-[10px] font-semibold ${isCorrect ? "text-success" : "text-destructive"}`}>
+                                {isCorrect ? "✓ Correta" : `✗ (correta: ${q.correct_answer})`}
+                              </span>
+                            )}
                           </p>
                         </div>
                       );
