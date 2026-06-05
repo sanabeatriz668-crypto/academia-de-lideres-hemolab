@@ -2,13 +2,19 @@ import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, FileText, Download, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GraduationCap, FileText, Download, ExternalLink, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export default function Treinamentos() {
+  const { user } = useAuth();
+  const [viewer, setViewer] = useState<{ url: string; title: string; type?: string } | null>(null);
+
   const { data: trainings = [] } = useQuery({
     queryKey: ["trainings"],
     queryFn: async () => {
@@ -27,26 +33,56 @@ export default function Treinamentos() {
     },
   });
 
-  const download = async (doc: any) => {
+  const markProgress = async (trainingId: string) => {
+    if (!user) return;
+    await supabase.from("training_progress").upsert(
+      { user_id: user.id, training_id: trainingId, status: "concluido", progress: 100 } as any,
+      { onConflict: "user_id,training_id" } as any
+    );
+  };
+
+  const openSignedUrl = async (doc: any, download = false) => {
     const ext = doc.file_path.split(".").pop()?.split("?")[0] || "";
     const titleHasExt = /\.[a-z0-9]{1,5}$/i.test(doc.title);
     const filename = titleHasExt || !ext ? doc.title : `${doc.title}.${ext}`;
-    const { data, error } = await supabase.storage.from("library").createSignedUrl(doc.file_path, 60, { download: filename });
+    const opts = download ? { download: filename } : undefined;
+    const { data, error } = await supabase.storage.from("library").createSignedUrl(doc.file_path, 3600, opts as any);
     if (error || !data?.signedUrl) {
       toast.error("Erro ao gerar link");
-      return;
+      return null;
     }
+    return { signedUrl: data.signedUrl, filename, ext };
+  };
+
+  const view = async (doc: any) => {
+    const r = await openSignedUrl(doc, false);
+    if (!r) return;
+    setViewer({ url: r.signedUrl, title: doc.title, type: doc.file_type });
+    markProgress(doc.training_id);
+  };
+
+  const download = async (doc: any) => {
+    const r = await openSignedUrl(doc, true);
+    if (!r) return;
     try {
-      const resp = await fetch(data.signedUrl);
+      const resp = await fetch(r.signedUrl);
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = filename;
+      a.href = url; a.download = r.filename;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      window.open(data.signedUrl, "_blank");
+      window.open(r.signedUrl, "_blank");
     }
+    markProgress(doc.training_id);
+  };
+
+  const isViewableInIframe = (type?: string, url?: string) => {
+    if (!type && !url) return true;
+    const t = (type || "").toLowerCase();
+    const u = (url || "").toLowerCase();
+    return t.includes("pdf") || t.startsWith("image/") || t.startsWith("video/") || u.endsWith(".pdf");
   };
 
   return (
@@ -88,6 +124,9 @@ export default function Treinamentos() {
                         <div key={d.id} className="flex items-center gap-2 p-2 rounded border bg-card">
                           <FileText className="h-4 w-4 text-primary flex-shrink-0" />
                           <p className="flex-1 text-xs truncate">{d.title}</p>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => view(d)}>
+                            <Eye className="h-3.5 w-3.5 mr-1" /> Ver
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => download(d)}>
                             <Download className="h-3.5 w-3.5 mr-1" /> Baixar
                           </Button>
@@ -101,6 +140,25 @@ export default function Treinamentos() {
           );
         })}
       </div>
+
+      <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[85vh] p-0 flex flex-col">
+          <DialogHeader className="px-4 py-3 border-b">
+            <DialogTitle className="text-sm">{viewer?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden bg-muted">
+            {viewer && (isViewableInIframe(viewer.type, viewer.url) ? (
+              <iframe src={viewer.url} className="w-full h-full" title={viewer.title} />
+            ) : (
+              <iframe
+                src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(viewer.url)}`}
+                className="w-full h-full"
+                title={viewer.title}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
