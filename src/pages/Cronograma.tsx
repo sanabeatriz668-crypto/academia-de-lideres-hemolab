@@ -101,7 +101,20 @@ export default function Cronograma() {
   });
 
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: myClassIds = [] } = useQuery({
+    queryKey: ["my-class-ids", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("class_members")
+        .select("class_id")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return (data || []).map((r: any) => r.class_id as string);
+    },
+  });
+
+  const { data: allEvents = [], isLoading } = useQuery({
     queryKey: ["schedule_events"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -112,6 +125,12 @@ export default function Cronograma() {
       return data as ScheduleEvent[];
     },
   });
+
+  // Admins see everything. Participants/leaders see events without class OR events for their classes.
+  const events = isAdmin
+    ? allEvents
+    : allEvents.filter((ev) => !ev.class_id || myClassIds.includes(ev.class_id));
+
 
   const createEvent = useMutation({
     mutationFn: async () => {
