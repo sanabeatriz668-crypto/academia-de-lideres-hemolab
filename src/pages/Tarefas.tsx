@@ -232,7 +232,10 @@ function QuestionField({ index, question, initial, onSave }: { index: number; qu
   const [val, setVal] = useState(initial);
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-medium text-foreground">{index + 1}. {question.question_text}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium text-foreground flex-1">{index + 1}. {question.question_text}</p>
+        {question.points > 0 && <Badge variant="secondary" className="text-[10px] flex-shrink-0">{question.points} pts</Badge>}
+      </div>
       <div className="flex gap-2">
         <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder="Sua resposta..." className="text-xs min-h-[50px]" />
         <Button size="icon" variant="ghost" className="self-end" onClick={() => onSave(val)}>
