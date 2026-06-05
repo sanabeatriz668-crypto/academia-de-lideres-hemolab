@@ -351,8 +351,12 @@ export default function Admin() {
                     <div className="space-y-1.5"><Label className="text-xs">Semana *</Label><Input value={taskWeek} onChange={(e) => setTaskWeek(e.target.value)} placeholder="Ex: Semana 1" className="text-sm" /></div>
                   </div>
                   <div className="space-y-1.5"><Label className="text-xs">Descrição</Label><Textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="text-sm min-h-[70px]" /></div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Estudo de caso (texto que o participante lerá antes de responder)</Label>
+                    <Textarea value={taskCaseStudy} onChange={(e) => setTaskCaseStudy(e.target.value)} placeholder="Descreva o contexto / situação-problema..." className="text-sm min-h-[120px]" />
+                  </div>
                   <div className="grid grid-cols-2 gap-4 max-w-xs">
-                    <div className="space-y-1.5"><Label className="text-xs">Pontos</Label><Input type="number" value={taskPoints} onChange={(e) => setTaskPoints(e.target.value)} min="0" className="text-sm" /></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Pontos totais</Label><Input type="number" value={taskPoints} onChange={(e) => setTaskPoints(e.target.value)} min="0" className="text-sm" /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Prazo</Label><Input type="date" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="text-sm" /></div>
                   </div>
                   <Button type="submit" size="sm" disabled={createTask.isPending}><Plus className="h-3.5 w-3.5 mr-1.5" />{createTask.isPending ? "Criando..." : "Criar Tarefa"}</Button>
