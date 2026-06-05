@@ -40,6 +40,7 @@ type Question = {
   question_text: string;
   question_type: "text" | "scale" | "choice";
   options: string[] | null;
+  correct_answer: string | null;
   sort_order: number;
 };
 
