@@ -103,6 +103,7 @@ export default function Admin() {
   // ---- Tasks ----
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
+  const [taskCaseStudy, setTaskCaseStudy] = useState("");
   const [taskWeek, setTaskWeek] = useState("");
   const [taskPoints, setTaskPoints] = useState("10");
   const [taskDueDate, setTaskDueDate] = useState("");
@@ -122,15 +123,16 @@ export default function Admin() {
       const { error } = await supabase.from("tasks").insert({
         title: taskTitle.trim(),
         description: taskDescription.trim() || null,
+        case_study: taskCaseStudy.trim() || null,
         week: taskWeek.trim(),
         points: parseInt(taskPoints) || 0,
         due_date: taskDueDate || null,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Tarefa criada!");
-      setTaskTitle(""); setTaskDescription(""); setTaskWeek(""); setTaskPoints("10"); setTaskDueDate("");
+      setTaskTitle(""); setTaskDescription(""); setTaskCaseStudy(""); setTaskWeek(""); setTaskPoints("10"); setTaskDueDate("");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (e: Error) => toast.error(e.message),
