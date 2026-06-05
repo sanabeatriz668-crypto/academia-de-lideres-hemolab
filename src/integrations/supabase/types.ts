@@ -303,6 +303,7 @@ export type Database = {
       }
       form_questions: {
         Row: {
+          correct_answer: string | null
           created_at: string
           form_id: string
           id: string
@@ -312,6 +313,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          correct_answer?: string | null
           created_at?: string
           form_id: string
           id?: string
@@ -321,6 +323,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          correct_answer?: string | null
           created_at?: string
           form_id?: string
           id?: string
@@ -633,6 +636,7 @@ export type Database = {
           created_at: string
           id: string
           options: Json | null
+          points: number
           question_text: string
           question_type: string
           sort_order: number
@@ -642,6 +646,7 @@ export type Database = {
           created_at?: string
           id?: string
           options?: Json | null
+          points?: number
           question_text: string
           question_type?: string
           sort_order?: number
@@ -651,6 +656,7 @@ export type Database = {
           created_at?: string
           id?: string
           options?: Json | null
+          points?: number
           question_text?: string
           question_type?: string
           sort_order?: number
@@ -668,6 +674,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          case_study: string | null
           created_at: string
           description: string | null
           due_date: string | null
@@ -677,6 +684,7 @@ export type Database = {
           week: string
         }
         Insert: {
+          case_study?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -686,6 +694,7 @@ export type Database = {
           week: string
         }
         Update: {
+          case_study?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
