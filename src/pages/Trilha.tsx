@@ -43,6 +43,49 @@ export default function Trilha() {
     enabled: !!user,
   });
 
+  // Auto-advance signals: count completed activities the participant performed.
+  const { data: taskDone = 0 } = useQuery({
+    queryKey: ["auto-task-done", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase.from("task_completions").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("done", true);
+      return count || 0;
+    },
+  });
+  const { data: formsDone = 0 } = useQuery({
+    queryKey: ["auto-forms-done", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase.from("form_responses").select("id", { count: "exact", head: true }).eq("respondent_id", user!.id);
+      return count || 0;
+    },
+  });
+  const { data: trainingsDone = 0 } = useQuery({
+    queryKey: ["auto-trainings-done", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase.from("training_progress").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "concluido");
+      return count || 0;
+    },
+  });
+
+  const totalDone = taskDone + formsDone + trainingsDone;
+
+  // Compute auto progress distributed across modules in sort_order.
+  // Each module needs `activities` items to be 100%. Excess flows to the next module.
+  const autoProgressByModule: Record<string, { status: ModuleStatus; progress: number }> = {};
+  let remaining = totalDone;
+  for (const m of modules as any[]) {
+    const need = Math.max(1, m.activities || 1);
+    const filled = Math.min(need, remaining);
+    remaining -= filled;
+    const pct = Math.round((filled / need) * 100);
+    autoProgressByModule[m.id] = {
+      progress: pct,
+      status: pct >= 100 ? "concluido" : pct > 0 ? "em_andamento" : "pendente",
+    };
+  }
+
   const upsertProgress = useMutation({
     mutationFn: async ({ moduleId, status, progress }: { moduleId: string; status: string; progress: number }) => {
       const { error } = await supabase.from("module_progress").upsert(
@@ -58,8 +101,15 @@ export default function Trilha() {
   });
 
   const getProgress = (moduleId: string) => {
-    return progressData.find((p) => p.module_id === moduleId);
+    const manual = progressData.find((p) => p.module_id === moduleId);
+    const auto = autoProgressByModule[moduleId];
+    if (!auto) return manual;
+    // Use the higher of manual/auto so participants always see auto-advance.
+    if (!manual) return { module_id: moduleId, status: auto.status, progress: auto.progress } as any;
+    const manualPct = manual.progress || 0;
+    return manualPct >= auto.progress ? manual : { ...manual, status: auto.status, progress: auto.progress };
   };
+
 
   const completed = progressData.filter((p) => p.status === "concluido").length;
 
