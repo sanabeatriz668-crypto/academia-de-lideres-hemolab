@@ -192,6 +192,12 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
             )}
           </div>
         </div>
+        {task.case_study && (
+          <div className="ml-7 rounded-lg border bg-muted/40 p-3">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-1.5">Estudo de caso</p>
+            <p className="text-xs whitespace-pre-wrap leading-relaxed">{task.case_study}</p>
+          </div>
+        )}
         {questions.length > 0 && (
           <div className="ml-7 space-y-3 pt-2 border-t">
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Perguntas</p>
