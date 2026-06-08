@@ -179,11 +179,21 @@ export default function Trilha() {
                           <span className="flex items-center gap-1"><ListChecks className="h-3 w-3" />{mod.activities} atividades</span>
                         </div>
                         {status !== "pendente" && <Progress value={progressVal} className="h-1.5" />}
-                        <ModuleActions
-                          status={status}
-                          progress={progressVal}
-                          onUpdate={(s, p) => upsertProgress.mutate({ moduleId: mod.id, status: s, progress: p })}
-                        />
+                        {isParticipant ? (
+                          <p className="text-xs text-muted-foreground">
+                            {status === "concluido"
+                              ? "✓ Módulo concluído"
+                              : status === "em_andamento"
+                              ? `Progresso automático: ${progressVal}%`
+                              : "Complete tarefas, formulários e treinamentos para avançar."}
+                          </p>
+                        ) : (
+                          <ModuleActions
+                            status={status}
+                            progress={progressVal}
+                            onUpdate={(s, p) => upsertProgress.mutate({ moduleId: mod.id, status: s, progress: p })}
+                          />
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
