@@ -24,6 +24,16 @@ export default function Trilha() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const { data: meProfile } = useQuery({
+    queryKey: ["me-role-trilha", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("role").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+  });
+  const isParticipant = meProfile?.role === "participante" || !meProfile?.role;
+
   const { data: modules = [] } = useQuery({
     queryKey: ["modules"],
     queryFn: async () => {
