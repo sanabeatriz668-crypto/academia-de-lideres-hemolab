@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Beaker, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import hemolabLogo from "@/assets/hemolab-logo.png.asset.json";
 import { toast } from "sonner";
 
 export default function Cadastro() {
