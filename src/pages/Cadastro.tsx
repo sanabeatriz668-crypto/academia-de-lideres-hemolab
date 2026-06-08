@@ -44,11 +44,9 @@ export default function Cadastro() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-card">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto gradient-primary rounded-xl p-3 w-fit">
-            <Beaker className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img src={hemolabLogo.url} alt="Laboratório Hemolab" className="mx-auto h-20 w-auto object-contain" />
           <div>
-            <CardTitle className="text-2xl font-bold">LeaderLab</CardTitle>
+            <CardTitle className="text-2xl font-bold">Programa de Líderes</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Crie sua conta</p>
           </div>
         </CardHeader>
