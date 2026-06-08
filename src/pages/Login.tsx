@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Beaker, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { toast } from "sonner";
+import hemolabLogo from "@/assets/hemolab-logo.png.asset.json";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,11 +31,9 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-card">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto gradient-primary rounded-xl p-3 w-fit">
-            <Beaker className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img src={hemolabLogo.url} alt="Laboratório Hemolab" className="mx-auto h-20 w-auto object-contain" />
           <div>
-            <CardTitle className="text-2xl font-bold">LeaderLab</CardTitle>
+            <CardTitle className="text-2xl font-bold">Programa de Líderes</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Acesse sua conta</p>
           </div>
         </CardHeader>
