@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,42 @@ import { toast } from "sonner";
 export default function Evolucao() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const { data: me } = useQuery({
+    queryKey: ["me-role-evol", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("role").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+  });
+  const role = me?.role || "participante";
+  const isLeader = role === "lider" || role === "admin";
+
+  // For leaders/admins: list of liderados to pick from
+  const { data: liderados = [] } = useQuery({
+    queryKey: ["liderados", user?.id, role],
+    enabled: !!user && isLeader,
+    queryFn: async () => {
+      let q = supabase.from("profiles").select("id, user_id, full_name, role").order("full_name");
+      if (role === "lider") q = q.eq("leader_id", user!.id);
+      else q = q.eq("role", "participante");
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const [selectedUser, setSelectedUser] = useState<string>("");
+  useEffect(() => {
+    if (isLeader && !selectedUser && liderados.length > 0) {
+      setSelectedUser((liderados[0] as any).user_id);
+    }
+  }, [isLeader, liderados, selectedUser]);
+
+  // The user whose checkins we're viewing
+  const targetUserId = isLeader ? selectedUser : user?.id;
+
   const [showForm, setShowForm] = useState(false);
   const [strengths, setStrengths] = useState("");
   const [improvements, setImprovements] = useState("");
@@ -44,23 +81,24 @@ export default function Evolucao() {
   }, [open]);
 
   const { data: checkins = [] } = useQuery({
-    queryKey: ["evolution_checkins", user?.id],
+    queryKey: ["evolution_checkins", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("evolution_checkins")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", targetUserId!)
         .order("meeting_date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
   });
 
   const createCheckin = useMutation({
     mutationFn: async () => {
+      if (!targetUserId) throw new Error("Selecione um liderado");
       const { error } = await supabase.from("evolution_checkins").insert({
-        user_id: user!.id,
+        user_id: targetUserId,
         strengths,
         improvements,
         action_plan: actionPlan,
@@ -74,6 +112,7 @@ export default function Evolucao() {
       setShowForm(false);
       setStrengths(""); setImprovements(""); setActionPlan("");
     },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const updateCheckin = useMutation({
@@ -111,16 +150,42 @@ export default function Evolucao() {
   });
 
   return (
-    <AppLayout title="Check-in de Evolução" subtitle="Reuniões quinzenais de acompanhamento">
+    <AppLayout
+      title="Check-in de Evolução"
+      subtitle={isLeader ? "Registre os check-ins quinzenais dos seus liderados" : "Acompanhe seus check-ins de evolução"}
+    >
       <div className="max-w-3xl mx-auto space-y-6">
+        {isLeader && (
+          <Card className="shadow-card">
+            <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Label className="text-xs whitespace-nowrap">Liderado</Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger className="text-sm"><SelectValue placeholder="Selecione um liderado" /></SelectTrigger>
+                <SelectContent>
+                  {liderados.length === 0 && <SelectItem value="none" disabled>Nenhum liderado vinculado</SelectItem>}
+                  {(liderados as any[]).map((l) => (
+                    <SelectItem key={l.user_id} value={l.user_id}>{l.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">Registre pontos fortes, melhorias e planos de ação.</p>
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
-            <Plus className="h-4 w-4 mr-1" /> Novo Check-in
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            {isLeader
+              ? "Pontos fortes, melhorias e planos de ação do liderado."
+              : "Apenas seu líder pode registrar check-ins. Você pode visualizá-los aqui."}
+          </p>
+          {isLeader && targetUserId && (
+            <Button size="sm" onClick={() => setShowForm(!showForm)}>
+              <Plus className="h-4 w-4 mr-1" /> Novo Check-in
+            </Button>
+          )}
         </div>
 
-        {showForm && (
+        {isLeader && showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="shadow-card border-primary/30">
               <CardContent className="p-4 space-y-4">
@@ -213,33 +278,37 @@ export default function Evolucao() {
               <div className="space-y-3">
                 <div>
                   <Label className="text-xs">Data da reunião</Label>
-                  <Input type="date" value={eMeetingDate} onChange={(e) => setEMeetingDate(e.target.value)} className="text-sm" />
+                  <Input type="date" value={eMeetingDate} onChange={(e) => setEMeetingDate(e.target.value)} className="text-sm" disabled={!isLeader} />
                 </div>
                 <div>
                   <Label className="text-xs flex items-center gap-1"><Sparkles className="h-3 w-3 text-success" /> Pontos Fortes</Label>
-                  <Textarea value={eStrengths} onChange={(e) => setEStrengths(e.target.value)} className="text-sm min-h-[80px]" />
+                  <Textarea value={eStrengths} onChange={(e) => setEStrengths(e.target.value)} className="text-sm min-h-[80px]" disabled={!isLeader} />
                 </div>
                 <div>
                   <Label className="text-xs flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-warning" /> Pontos de Melhoria</Label>
-                  <Textarea value={eImprovements} onChange={(e) => setEImprovements(e.target.value)} className="text-sm min-h-[80px]" />
+                  <Textarea value={eImprovements} onChange={(e) => setEImprovements(e.target.value)} className="text-sm min-h-[80px]" disabled={!isLeader} />
                 </div>
                 <div>
                   <Label className="text-xs flex items-center gap-1"><Target className="h-3 w-3 text-primary" /> Plano de Ação</Label>
-                  <Textarea value={eActionPlan} onChange={(e) => setEActionPlan(e.target.value)} className="text-sm min-h-[80px]" />
+                  <Textarea value={eActionPlan} onChange={(e) => setEActionPlan(e.target.value)} className="text-sm min-h-[80px]" disabled={!isLeader} />
                 </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-2">
-                <Button
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10 mr-auto"
-                  onClick={() => deleteCheckin.mutate(open.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" /> Excluir
-                </Button>
+                {isLeader && (
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10 mr-auto"
+                    onClick={() => deleteCheckin.mutate(open.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setOpen(null)}>Fechar</Button>
-                <Button onClick={() => updateCheckin.mutate()} disabled={updateCheckin.isPending}>
-                  Salvar alterações
-                </Button>
+                {isLeader && (
+                  <Button onClick={() => updateCheckin.mutate()} disabled={updateCheckin.isPending}>
+                    Salvar alterações
+                  </Button>
+                )}
               </DialogFooter>
             </>
           )}
