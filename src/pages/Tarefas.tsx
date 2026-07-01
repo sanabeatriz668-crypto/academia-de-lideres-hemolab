@@ -1,10 +1,11 @@
 import { AppLayout } from "@/components/AppLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, Calendar, Send } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CheckCircle2, Clock, Calendar, Send, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +17,35 @@ export default function Tarefas() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const { data: meProfile } = useQuery({
+    queryKey: ["me-role-tarefas", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("role").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+  });
+  const isAdmin = meProfile?.role === "admin";
+  const isLeader = meProfile?.role === "lider";
+  const isManager = isAdmin || isLeader;
+
+  const [viewUserId, setViewUserId] = useState<string>("");
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["tarefas-participants", user?.id, isAdmin, isLeader],
+    enabled: isManager && !!user,
+    queryFn: async () => {
+      let q = supabase.from("profiles").select("user_id, full_name, leader_id, role").order("full_name");
+      if (isLeader && !isAdmin) q = q.eq("leader_id", user!.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const targetUserId = viewUserId || user?.id;
+  const viewingOther = isManager && !!viewUserId && viewUserId !== user?.id;
+
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks"],
     queryFn: async () => {
@@ -26,13 +56,13 @@ export default function Tarefas() {
   });
 
   const { data: completions = [] } = useQuery({
-    queryKey: ["task_completions", user?.id],
+    queryKey: ["task_completions", targetUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("task_completions").select("*").eq("user_id", user!.id);
+      const { data, error } = await supabase.from("task_completions").select("*").eq("user_id", targetUserId!);
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
   const upsertCompletion = useMutation({
@@ -54,10 +84,43 @@ export default function Tarefas() {
 
   const getCompletion = (taskId: string) => completions.find((c) => c.task_id === taskId);
   const completedCount = completions.filter((c) => c.done).length;
+  const viewedName = participants.find((p: any) => p.user_id === viewUserId)?.full_name;
 
   return (
     <AppLayout title="Gestão de Tarefas" subtitle="Suas tarefas semanais">
       <div className="max-w-3xl mx-auto space-y-6">
+        {isManager && (
+          <Card className="shadow-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Ver respostas de participante
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={viewUserId || "self"} onValueChange={(v) => setViewUserId(v === "self" ? "" : v)}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Selecionar participante" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="self">Minhas tarefas</SelectItem>
+                  {participants
+                    .filter((p: any) => p.user_id !== user?.id)
+                    .map((p: any) => (
+                      <SelectItem key={p.user_id} value={p.user_id}>
+                        {p.full_name} {p.role ? `(${p.role})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {viewingOther && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Visualizando respostas de <span className="font-medium text-foreground">{viewedName}</span> (somente leitura).
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="shadow-card">
             <CardContent className="p-4 flex items-center gap-3">
@@ -105,6 +168,8 @@ export default function Tarefas() {
                     task={task}
                     done={done}
                     reflection={comp?.reflection || ""}
+                    readOnly={viewingOther}
+                    targetUserId={targetUserId!}
                     onToggle={() => upsertCompletion.mutate({ taskId: task.id, done: !done, reflection: comp?.reflection || "" })}
                     onSaveReflection={(r) => {
                       upsertCompletion.mutate({ taskId: task.id, done: true, reflection: r });
@@ -121,10 +186,10 @@ export default function Tarefas() {
   );
 }
 
-function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
-  task: any; done: boolean; reflection: string; onToggle: () => void; onSaveReflection: (r: string) => void;
+function TaskCard({ task, done, reflection, readOnly, targetUserId, onToggle, onSaveReflection }: {
+  task: any; done: boolean; reflection: string; readOnly: boolean; targetUserId: string;
+  onToggle: () => void; onSaveReflection: (r: string) => void;
 }) {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [text, setText] = useState(reflection);
 
@@ -142,14 +207,14 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
   });
 
   const { data: answers = [] } = useQuery({
-    queryKey: ["task_question_answers", task.id, user?.id],
-    enabled: !!user && questions.length > 0,
+    queryKey: ["task_question_answers", task.id, targetUserId],
+    enabled: !!targetUserId && questions.length > 0,
     queryFn: async () => {
       const ids = questions.map((q: any) => q.id);
       const { data, error } = await supabase
         .from("task_question_answers")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", targetUserId)
         .in("question_id", ids);
       if (error) throw error;
       return data;
@@ -159,14 +224,14 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
   const saveAnswer = useMutation({
     mutationFn: async ({ questionId, answer }: { questionId: string; answer: string }) => {
       const { error } = await supabase.from("task_question_answers").upsert(
-        { question_id: questionId, user_id: user!.id, answer_text: answer },
+        { question_id: questionId, user_id: targetUserId, answer_text: answer },
         { onConflict: "question_id,user_id" }
       );
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Resposta salva!");
-      queryClient.invalidateQueries({ queryKey: ["task_question_answers", task.id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["task_question_answers", task.id, targetUserId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -175,7 +240,7 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
     <Card className={`shadow-card transition-all ${done ? "border-success/30 bg-success/5" : ""}`}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start gap-3">
-          <Checkbox checked={done} onCheckedChange={onToggle} className="mt-1" />
+          <Checkbox checked={done} onCheckedChange={readOnly ? undefined : onToggle} disabled={readOnly} className="mt-1" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <h3 className={`text-sm font-medium ${done ? "line-through text-muted-foreground" : "text-foreground"}`}>{task.title}</h3>
@@ -200,13 +265,16 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
         )}
         {questions.length > 0 && (
           <div className="ml-7 space-y-3 pt-2 border-t">
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Perguntas</p>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+              {readOnly ? "Respostas do participante" : "Perguntas"}
+            </p>
             {questions.map((q: any, idx: number) => (
               <QuestionField
                 key={q.id}
                 index={idx}
                 question={q}
                 initial={answers.find((a: any) => a.question_id === q.id)?.answer_text || ""}
+                readOnly={readOnly}
                 onSave={(a) => saveAnswer.mutate({ questionId: q.id, answer: a })}
               />
             ))}
@@ -214,13 +282,21 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
         )}
         {done && (
           <div className="ml-7 space-y-2">
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">O que você aplicou na prática?</p>
-            <div className="flex gap-2">
-              <Textarea placeholder="Descreva sua experiência..." value={text} onChange={(e) => setText(e.target.value)} className="text-xs min-h-[60px]" />
-              <Button size="icon" variant="ghost" className="flex-shrink-0 self-end" onClick={() => onSaveReflection(text)}>
-                <Send className="h-3 w-3" />
-              </Button>
-            </div>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
+              {readOnly ? "Reflexão do participante" : "O que você aplicou na prática?"}
+            </p>
+            {readOnly ? (
+              <p className="text-xs whitespace-pre-wrap p-2 rounded border bg-muted/30 min-h-[40px]">
+                {reflection || <span className="italic text-muted-foreground">Sem reflexão registrada.</span>}
+              </p>
+            ) : (
+              <div className="flex gap-2">
+                <Textarea placeholder="Descreva sua experiência..." value={text} onChange={(e) => setText(e.target.value)} className="text-xs min-h-[60px]" />
+                <Button size="icon" variant="ghost" className="flex-shrink-0 self-end" onClick={() => onSaveReflection(text)}>
+                  <Send className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -228,7 +304,7 @@ function TaskCard({ task, done, reflection, onToggle, onSaveReflection }: {
   );
 }
 
-function QuestionField({ index, question, initial, onSave }: { index: number; question: any; initial: string; onSave: (a: string) => void }) {
+function QuestionField({ index, question, initial, readOnly, onSave }: { index: number; question: any; initial: string; readOnly: boolean; onSave: (a: string) => void }) {
   const [val, setVal] = useState(initial);
   return (
     <div className="space-y-1.5">
@@ -236,12 +312,18 @@ function QuestionField({ index, question, initial, onSave }: { index: number; qu
         <p className="text-xs font-medium text-foreground flex-1">{index + 1}. {question.question_text}</p>
         {question.points > 0 && <Badge variant="secondary" className="text-[10px] flex-shrink-0">{question.points} pts</Badge>}
       </div>
-      <div className="flex gap-2">
-        <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder="Sua resposta..." className="text-xs min-h-[50px]" />
-        <Button size="icon" variant="ghost" className="self-end" onClick={() => onSave(val)}>
-          <Send className="h-3 w-3" />
-        </Button>
-      </div>
+      {readOnly ? (
+        <p className="text-xs whitespace-pre-wrap p-2 rounded border bg-muted/30 min-h-[40px]">
+          {initial || <span className="italic text-muted-foreground">Sem resposta.</span>}
+        </p>
+      ) : (
+        <div className="flex gap-2">
+          <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder="Sua resposta..." className="text-xs min-h-[50px]" />
+          <Button size="icon" variant="ghost" className="self-end" onClick={() => onSave(val)}>
+            <Send className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
