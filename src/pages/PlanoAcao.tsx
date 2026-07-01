@@ -63,10 +63,12 @@ export default function PlanoAcao() {
     },
   });
   const isAdmin = profile?.role === "admin";
+  const isLeader = profile?.role === "lider";
+  const isManager = isAdmin || isLeader;
 
   const { data: leaders = [] } = useQuery({
     queryKey: ["leaders-list"],
-    enabled: isAdmin,
+    enabled: isManager,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
