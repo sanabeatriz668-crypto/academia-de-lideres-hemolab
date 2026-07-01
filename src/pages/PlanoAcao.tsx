@@ -317,7 +317,7 @@ export default function PlanoAcao() {
                       Prazo: {new Date(openPlan.due_date).toLocaleDateString("pt-BR")}
                     </Badge>
                   )}
-                  {isAdmin && (
+                  {isManager && (
                     <Badge variant="secondary" className="text-[10px] gap-1">
                       <User className="h-3 w-3" />
                       {openPlan.user_id === user?.id ? "Você" : leaderNameById(openPlan.user_id)}
