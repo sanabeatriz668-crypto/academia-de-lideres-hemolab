@@ -2,13 +2,14 @@ import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Play, Lock, ListChecks, FileText } from "lucide-react";
+import { CheckCircle2, Play, Lock, ListChecks, FileText, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -32,7 +33,28 @@ export default function Trilha() {
       return data;
     },
   });
-  const isParticipant = meProfile?.role === "participante" || !meProfile?.role;
+  const isAdmin = meProfile?.role === "admin";
+  const isLeader = meProfile?.role === "lider";
+  const isManager = isAdmin || isLeader;
+  const isParticipant = !isManager;
+
+  // Manager can pick a participant to inspect. Empty = view self.
+  const [viewUserId, setViewUserId] = useState<string>("");
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["trilha-participants", user?.id, isAdmin, isLeader],
+    enabled: isManager && !!user,
+    queryFn: async () => {
+      let q = supabase.from("profiles").select("user_id, full_name, leader_id, role").order("full_name");
+      if (isLeader && !isAdmin) q = q.eq("leader_id", user!.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const targetUserId = viewUserId || user?.id;
+  const viewingOther = isManager && !!viewUserId && viewUserId !== user?.id;
 
   const { data: modules = [] } = useQuery({
     queryKey: ["modules"],
@@ -44,45 +66,42 @@ export default function Trilha() {
   });
 
   const { data: progressData = [] } = useQuery({
-    queryKey: ["module_progress", user?.id],
+    queryKey: ["module_progress", targetUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("module_progress").select("*").eq("user_id", user!.id);
+      const { data, error } = await supabase.from("module_progress").select("*").eq("user_id", targetUserId!);
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!targetUserId,
   });
 
-  // Auto-advance signals: count completed activities the participant performed.
   const { data: taskDone = 0 } = useQuery({
-    queryKey: ["auto-task-done", user?.id],
-    enabled: !!user,
+    queryKey: ["auto-task-done", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
-      const { count } = await supabase.from("task_completions").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("done", true);
+      const { count } = await supabase.from("task_completions").select("id", { count: "exact", head: true }).eq("user_id", targetUserId!).eq("done", true);
       return count || 0;
     },
   });
   const { data: formsDone = 0 } = useQuery({
-    queryKey: ["auto-forms-done", user?.id],
-    enabled: !!user,
+    queryKey: ["auto-forms-done", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
-      const { count } = await supabase.from("form_responses").select("id", { count: "exact", head: true }).eq("respondent_id", user!.id);
+      const { count } = await supabase.from("form_responses").select("id", { count: "exact", head: true }).eq("respondent_id", targetUserId!);
       return count || 0;
     },
   });
   const { data: trainingsDone = 0 } = useQuery({
-    queryKey: ["auto-trainings-done", user?.id],
-    enabled: !!user,
+    queryKey: ["auto-trainings-done", targetUserId],
+    enabled: !!targetUserId,
     queryFn: async () => {
-      const { count } = await supabase.from("training_progress").select("id", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "concluido");
+      const { count } = await supabase.from("training_progress").select("id", { count: "exact", head: true }).eq("user_id", targetUserId!).eq("status", "concluido");
       return count || 0;
     },
   });
 
   const totalDone = taskDone + formsDone + trainingsDone;
 
-  // Compute auto progress distributed across modules in sort_order.
-  // Each module needs `activities` items to be 100%. Excess flows to the next module.
   const autoProgressByModule: Record<string, { status: ModuleStatus; progress: number }> = {};
   let remaining = totalDone;
   for (const m of modules as any[]) {
@@ -114,18 +133,49 @@ export default function Trilha() {
     const manual = progressData.find((p) => p.module_id === moduleId);
     const auto = autoProgressByModule[moduleId];
     if (!auto) return manual;
-    // Use the higher of manual/auto so participants always see auto-advance.
     if (!manual) return { module_id: moduleId, status: auto.status, progress: auto.progress } as any;
     const manualPct = manual.progress || 0;
     return manualPct >= auto.progress ? manual : { ...manual, status: auto.status, progress: auto.progress };
   };
 
-
   const completed = (modules as any[]).filter((m) => getProgress(m.id)?.status === "concluido").length;
+  const viewedName = participants.find((p: any) => p.user_id === viewUserId)?.full_name;
 
   return (
     <AppLayout title="Trilha de Desenvolvimento" subtitle="Seu programa de 3 meses">
       <div className="max-w-4xl mx-auto space-y-6">
+        {isManager && (
+          <Card className="shadow-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Acompanhar trilha
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={viewUserId || "self"} onValueChange={(v) => setViewUserId(v === "self" ? "" : v)}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Selecionar participante" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="self">Minha trilha</SelectItem>
+                  {participants
+                    .filter((p: any) => p.user_id !== user?.id)
+                    .map((p: any) => (
+                      <SelectItem key={p.user_id} value={p.user_id}>
+                        {p.full_name} {p.role ? `(${p.role})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {viewingOther && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Visualizando trilha de <span className="font-medium text-foreground">{viewedName}</span> (somente leitura).
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex items-center gap-4 p-4 rounded-xl bg-card border shadow-card">
           <div className="gradient-primary rounded-lg p-3">
             <ListChecks className="h-5 w-5 text-primary-foreground" />
@@ -179,7 +229,7 @@ export default function Trilha() {
                           <span className="flex items-center gap-1"><ListChecks className="h-3 w-3" />{mod.activities} atividades</span>
                         </div>
                         {status !== "pendente" && <Progress value={progressVal} className="h-1.5" />}
-                        {isParticipant ? (
+                        {isParticipant || viewingOther ? (
                           <p className="text-xs text-muted-foreground">
                             {status === "concluido"
                               ? "✓ Módulo concluído"

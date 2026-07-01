@@ -63,10 +63,12 @@ export default function PlanoAcao() {
     },
   });
   const isAdmin = profile?.role === "admin";
+  const isLeader = profile?.role === "lider";
+  const isManager = isAdmin || isLeader;
 
   const { data: leaders = [] } = useQuery({
     queryKey: ["leaders-list"],
-    enabled: isAdmin,
+    enabled: isManager,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -263,7 +265,7 @@ export default function PlanoAcao() {
                             <Badge variant="outline" className={`text-[10px] ${priorityConfig[p.priority]?.color}`}>
                               {priorityConfig[p.priority]?.label}
                             </Badge>
-                            {isAdmin && (
+                            {isManager && (
                               <Badge variant="secondary" className="text-[10px] gap-1">
                                 <User className="h-3 w-3" />
                                 {p.user_id === user?.id ? "Você" : leaderNameById(p.user_id)}
@@ -315,7 +317,7 @@ export default function PlanoAcao() {
                       Prazo: {new Date(openPlan.due_date).toLocaleDateString("pt-BR")}
                     </Badge>
                   )}
-                  {isAdmin && (
+                  {isManager && (
                     <Badge variant="secondary" className="text-[10px] gap-1">
                       <User className="h-3 w-3" />
                       {openPlan.user_id === user?.id ? "Você" : leaderNameById(openPlan.user_id)}
